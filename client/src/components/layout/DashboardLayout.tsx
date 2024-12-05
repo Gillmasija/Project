@@ -24,7 +24,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <p className="text-sm opacity-80 capitalize">{user?.role}</p>
             </div>
           </div>
-          <Button variant="secondary" onClick={() => logout()}>
+          <Button 
+            variant="secondary" 
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                await logout();
+              } catch (error) {
+                console.error('Logout failed:', error);
+              }
+            }}
+          >
             Logout
           </Button>
         </div>
