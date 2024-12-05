@@ -1,4 +1,6 @@
 import { type Express } from "express";
+import { users, assignments, submissions, teacherStudents } from "@db/schema";
+import { eq, and, desc, count } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import { db } from "../db";
 import { users, assignments, submissions, teacherStudents } from "@db/schema";
@@ -35,7 +37,7 @@ export function registerRoutes(app: Express) {
     const [submissionCount] = await db
       .select({ count: count(submissions.id) })
       .from(submissions)
-      .join(assignments, eq(assignments.id, submissions.assignmentId))
+      .innerJoin(assignments, eq(assignments.id, submissions.assignmentId))
       .where(eq(assignments.teacherId, req.user!.id));
 
     res.json({
@@ -67,13 +69,13 @@ export function registerRoutes(app: Express) {
   // Student routes
   app.get("/api/student/stats", isAuthenticated, isStudent, async (req, res) => {
     const [assignmentCount] = await db
-      .select({ count: count() })
+      .select({ count: count(assignments.id) })
       .from(teacherStudents)
       .innerJoin(assignments, eq(assignments.teacherId, teacherStudents.teacherId))
       .where(eq(teacherStudents.studentId, req.user!.id));
 
     const [submissionCount] = await db
-      .select({ count: count() })
+      .select({ count: count(submissions.id) })
       .from(submissions)
       .where(eq(submissions.studentId, req.user!.id));
 
@@ -93,7 +95,7 @@ export function registerRoutes(app: Express) {
         avatar: users.avatar
       })
       .from(teacherStudents)
-      .join(users, eq(users.id, teacherStudents.teacherId))
+      .innerJoin(users, eq(users.id, teacherStudents.teacherId))
       .where(eq(teacherStudents.studentId, req.user!.id))
       .limit(1);
 
@@ -129,7 +131,7 @@ export function registerRoutes(app: Express) {
             }
           })
           .from(teacherStudents)
-          .join(assignments, eq(assignments.teacherId, teacherStudents.teacherId))
+          .innerJoin(assignments, eq(assignments.teacherId, teacherStudents.teacherId))
           .leftJoin(submissions, and(
             eq(submissions.assignmentId, assignments.id),
             eq(submissions.studentId, req.user!.id)
