@@ -53,10 +53,10 @@ export function registerRoutes(app: Express) {
         fullName: users.fullName,
         avatar: users.avatar,
         submissions: count(submissions.id),
-        completedAssignments: count(distinct(submissions.assignmentId))
+        completedAssignments: count()
       })
       .from(teacherStudents)
-      .join(users, eq(users.id, teacherStudents.studentId))
+      .innerJoin(users, eq(users.id, teacherStudents.studentId))
       .leftJoin(submissions, eq(submissions.studentId, users.id))
       .where(eq(teacherStudents.teacherId, req.user!.id))
       .groupBy(users.id, users.fullName, users.avatar);

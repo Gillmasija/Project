@@ -38,7 +38,4 @@ export const submissions = pgTable("submissions", {
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export interface User extends z.infer<typeof selectUserSchema> {
-  id: number;
-  role: string;
-}
+export type User = z.infer<typeof selectUserSchema>;
