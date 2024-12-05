@@ -2,7 +2,8 @@ import { type Express } from "express";
 import { setupAuth } from "./auth";
 import { db } from "../db";
 import { users, assignments, submissions, teacherStudents } from "@db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, count, sql } from "drizzle-orm";
+import { PgColumn } from "drizzle-orm/pg-core";
 
 // Auth middleware
 const isAuthenticated = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -66,13 +67,13 @@ export function registerRoutes(app: Express) {
   // Student routes
   app.get("/api/student/stats", isAuthenticated, isStudent, async (req, res) => {
     const [assignmentCount] = await db
-      .select({ count: count(assignments.id) })
+      .select({ count: count() })
       .from(teacherStudents)
-      .join(assignments, eq(assignments.teacherId, teacherStudents.teacherId))
+      .innerJoin(assignments, eq(assignments.teacherId, teacherStudents.teacherId))
       .where(eq(teacherStudents.studentId, req.user!.id));
 
     const [submissionCount] = await db
-      .select({ count: count(submissions.id) })
+      .select({ count: count() })
       .from(submissions)
       .where(eq(submissions.studentId, req.user!.id));
 
@@ -103,13 +104,25 @@ export function registerRoutes(app: Express) {
   app.get("/api/assignments", isAuthenticated, async (req, res) => {
     const userAssignments = req.user!.role === "teacher"
       ? await db
-          .select()
+          .select({
+            id: assignments.id,
+            title: assignments.title,
+            description: assignments.description,
+            dueDate: assignments.dueDate,
+            teacherId: assignments.teacherId,
+            createdAt: assignments.createdAt
+          })
           .from(assignments)
           .where(eq(assignments.teacherId, req.user!.id))
           .orderBy(desc(assignments.createdAt))
       : await db
           .select({
-            ...assignments,
+            id: assignments.id,
+            title: assignments.title,
+            description: assignments.description,
+            dueDate: assignments.dueDate,
+            teacherId: assignments.teacherId,
+            createdAt: assignments.createdAt,
             submission: {
               content: submissions.content,
               submittedAt: submissions.submittedAt
