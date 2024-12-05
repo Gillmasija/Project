@@ -3,6 +3,7 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import Stats from "../components/dashboard/Stats";
 import StudentList from "../components/dashboard/StudentList";
 import AssignmentCard from "../components/dashboard/AssignmentCard";
+import TeacherSchedule from "../components/dashboard/TeacherSchedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -143,9 +144,15 @@ export default function TeacherDashboard() {
               ))}
             </div>
           </div>
-          <div>
-            <h3 className="text-2xl font-bold mb-4">Your Students</h3>
-            <StudentList />
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-2xl font-bold mb-4">Your Students</h3>
+              <StudentList />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-4">Schedule Management</h3>
+              <TeacherSchedule />
+            </div>
           </div>
         </div>
       </div>

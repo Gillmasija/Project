@@ -1,13 +1,13 @@
 import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
+import { type Express, type Request, type Response, type NextFunction } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, teacherStudents, insertUserSchema, type User } from "@db/schema";
+import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "../db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -28,27 +28,54 @@ const crypto = {
   },
 };
 
+// extend express user object with our schema
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User extends SelectUser { }
   }
+}
+
+// Middleware to check if user is authenticated
+export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).send("Not authenticated");
+}
+
+// Middleware to check if user is a teacher
+export function isTeacher(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role === "teacher") {
+    return next();
+  }
+  res.status(403).send("Not authorized - Teacher access required");
+}
+
+// Middleware to check if user is a student
+export function isStudent(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role === "student") {
+    return next();
+  }
+  res.status(403).send("Not authorized - Student access required");
 }
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "african-education-dashboard",
+    secret: process.env.REPL_ID || "porygon-supremacy",
     resave: false,
     saveUninitialized: false,
     cookie: {},
     store: new MemoryStore({
-      checkPeriod: 86400000,
+      checkPeriod: 86400000, // prune expired entries every 24h
     }),
   };
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
-    sessionSettings.cookie = { secure: true };
+    sessionSettings.cookie = {
+      secure: true,
+    };
   }
 
   app.use(session(sessionSettings));
@@ -67,12 +94,10 @@ export function setupAuth(app: Express) {
         if (!user) {
           return done(null, false, { message: "Incorrect username." });
         }
-        
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
           return done(null, false, { message: "Incorrect password." });
         }
-        
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -106,9 +131,9 @@ export function setupAuth(app: Express) {
           .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
       }
 
-      const { username, password, role, fullName } = result.data;
+      const { username, password } = result.data;
 
-      // Check if user exists
+      // Check if user already exists
       const [existingUser] = await db
         .select()
         .from(users)
@@ -119,37 +144,23 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
-      // Create user with hashed password
+      // Hash the password
       const hashedPassword = await crypto.hash(password);
+
+      // Create the new user
       const [newUser] = await db
         .insert(users)
         .values({
-          username,
+          ...result.data,
           password: hashedPassword,
-          role,
-          fullName,
-          avatar: `https://i.pravatar.cc/150?u=${username}`,
         })
         .returning();
 
-      // Auto-assign teacher if student
-      if (role === "student") {
-        const [teacher] = await db
-          .select()
-          .from(users)
-          .where(and(eq(users.role, "teacher")))
-          .limit(1);
-        
-        if (teacher) {
-          await db.insert(teacherStudents).values({
-            teacherId: teacher.id,
-            studentId: newUser.id,
-          });
-        }
-      }
-
+      // Log the user in after registration
       req.login(newUser, (err) => {
-        if (err) return next(err);
+        if (err) {
+          return next(err);
+        }
         return res.json({
           message: "Registration successful",
           user: newUser,
@@ -168,20 +179,35 @@ export function setupAuth(app: Express) {
         .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
     }
 
-    passport.authenticate("local", (err: any, user: Express.User, info: IVerifyOptions) => {
-      if (err) return next(err);
-      if (!user) return res.status(400).send(info.message ?? "Login failed");
+    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
+      if (err) {
+        return next(err);
+      }
+
+      if (!user) {
+        return res.status(400).send(info.message ?? "Login failed");
+      }
 
       req.logIn(user, (err) => {
-        if (err) return next(err);
-        return res.json({ message: "Login successful", user });
+        if (err) {
+          return next(err);
+        }
+
+        return res.json({
+          message: "Login successful",
+          user,
+        });
       });
-    })(req, res, next);
+    };
+    passport.authenticate("local", cb)(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
-      if (err) return res.status(500).send("Logout failed");
+      if (err) {
+        return res.status(500).send("Logout failed");
+      }
+
       res.json({ message: "Logout successful" });
     });
   });

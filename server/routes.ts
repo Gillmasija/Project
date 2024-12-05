@@ -1,27 +1,8 @@
 import { type Express } from "express";
-import { users, assignments, submissions, teacherStudents } from "@db/schema";
-import { eq, and, desc, count } from "drizzle-orm";
-import { setupAuth } from "./auth";
 import { db } from "../db";
-import { users, assignments, submissions, teacherStudents } from "@db/schema";
+import { setupAuth, isAuthenticated, isTeacher, isStudent } from "./auth";
+import { users, assignments, submissions, teacherStudents, teacherSchedule } from "@db/schema";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { PgColumn } from "drizzle-orm/pg-core";
-
-// Auth middleware
-const isAuthenticated = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).send("Unauthorized");
-};
-
-const isTeacher = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-  if (req.user?.role === "teacher") return next();
-  res.status(403).send("Forbidden");
-};
-
-const isStudent = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-  if (req.user?.role === "student") return next();
-  res.status(403).send("Forbidden");
-};
 
 export function registerRoutes(app: Express) {
   // Set up authentication routes
@@ -171,5 +152,74 @@ export function registerRoutes(app: Express) {
       .returning();
 
     res.json(submission);
+  });
+
+  // Teacher Schedule Routes
+  app.get("/api/teacher/schedule", isAuthenticated, isTeacher, async (req, res) => {
+    const schedules = await db
+      .select()
+      .from(teacherSchedule)
+      .where(eq(teacherSchedule.teacherId, req.user!.id))
+      .orderBy(teacherSchedule.dayOfWeek, teacherSchedule.startTime);
+
+    res.json(schedules);
+  });
+
+  app.post("/api/teacher/schedule", isAuthenticated, isTeacher, async (req, res) => {
+    const { dayOfWeek, startTime, endTime } = req.body;
+    
+    const [newSchedule] = await db
+      .insert(teacherSchedule)
+      .values({
+        teacherId: req.user!.id,
+        dayOfWeek,
+        startTime,
+        endTime,
+        isAvailable: true
+      })
+      .returning();
+
+    res.json(newSchedule);
+  });
+
+  app.put("/api/teacher/schedule/:id", isAuthenticated, isTeacher, async (req, res) => {
+    const scheduleId = parseInt(req.params.id);
+    const { isAvailable } = req.body;
+
+    const [updatedSchedule] = await db
+      .update(teacherSchedule)
+      .set({ isAvailable })
+      .where(and(
+        eq(teacherSchedule.id, scheduleId),
+        eq(teacherSchedule.teacherId, req.user!.id)
+      ))
+      .returning();
+
+    res.json(updatedSchedule);
+  });
+
+  app.get("/api/student/teacher-schedule", isAuthenticated, isStudent, async (req, res) => {
+    const [teacher] = await db
+      .select({
+        teacherId: teacherStudents.teacherId
+      })
+      .from(teacherStudents)
+      .where(eq(teacherStudents.studentId, req.user!.id))
+      .limit(1);
+
+    if (!teacher) {
+      return res.status(404).send("No assigned teacher found");
+    }
+
+    const schedule = await db
+      .select()
+      .from(teacherSchedule)
+      .where(and(
+        eq(teacherSchedule.teacherId, teacher.teacherId),
+        eq(teacherSchedule.isAvailable, true)
+      ))
+      .orderBy(teacherSchedule.dayOfWeek, teacherSchedule.startTime);
+
+    res.json(schedule);
   });
 }

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -38,6 +38,16 @@ export const submissions = pgTable("submissions", {
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export const teacherSchedule = pgTable("teacher_schedule", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  teacherId: integer("teacher_id").references(() => users.id).notNull(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6 for Sunday-Saturday
+  startTime: text("start_time").notNull(), // Format: "HH:MM"
+  endTime: text("end_time").notNull(), // Format: "HH:MM"
+  isAvailable: boolean("is_available").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
 export interface User extends z.infer<typeof selectUserSchema> {
   id: number;
   role: string;
@@ -45,3 +55,8 @@ export interface User extends z.infer<typeof selectUserSchema> {
   fullName: string;
   avatar: string;
 }
+
+export const insertTeacherScheduleSchema = createInsertSchema(teacherSchedule);
+export const selectTeacherScheduleSchema = createSelectSchema(teacherSchedule);
+export type InsertTeacherSchedule = z.infer<typeof insertTeacherScheduleSchema>;
+export type TeacherSchedule = z.infer<typeof selectTeacherScheduleSchema>;
