@@ -95,7 +95,7 @@ export default function TeacherSchedule() {
       endTime,
       title: title || undefined,
       description: description || undefined,
-      studentId: selectedStudent ? parseInt(selectedStudent) : undefined
+      studentId: selectedStudent && selectedStudent !== "none" ? parseInt(selectedStudent) : undefined
     });
     setTitle("");
     setDescription("");
@@ -153,7 +153,7 @@ export default function TeacherSchedule() {
                 <SelectValue placeholder="Select student (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No student assigned</SelectItem>
+                <SelectItem value="none">No student assigned</SelectItem>
                 {students?.map((student: any) => (
                   <SelectItem key={student.id} value={student.id.toString()}>
                     {student.fullName}
