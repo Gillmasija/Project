@@ -45,10 +45,12 @@ export default function StudentDashboard() {
     }
   });
 
+  const { toast } = useToast();
+  
   const handleWhatsAppContact = () => {
     if (teacher?.phoneNumber) {
-      // Remove any non-numeric characters and ensure it starts with a plus sign if needed
-      const formattedNumber = teacher.phoneNumber.replace(/\D/g, '');
+      // Preserve the plus sign but remove other non-numeric characters
+      const formattedNumber = teacher.phoneNumber.replace(/[^\d+]/g, '');
       const whatsappUrl = `https://wa.me/${formattedNumber}`;
       window.open(whatsappUrl, '_blank');
     } else {
