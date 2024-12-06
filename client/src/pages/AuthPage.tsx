@@ -17,7 +17,16 @@ export default function AuthPage() {
   const { toast } = useToast();
 
   const registerSchema = insertUserSchema.extend({
-    confirmPassword: z.string()
+    confirmPassword: z.string(),
+    phoneNumber: z.string()
+      .optional()
+      .refine((val) => {
+        if (!val) return true;
+        // Validate international phone number format with country code
+        return /^\+\d{1,3}\d{6,14}$/.test(val);
+      }, {
+        message: "Invalid phone number format. Include country code (e.g., +1234567890)",
+      })
   }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -33,7 +42,8 @@ export default function AuthPage() {
       confirmPassword: "",
       role: "student",
       fullName: "",
-      avatar: "/edudash.png"
+      avatar: "/edudash.png",
+      phoneNumber: ""
     }
   });
 
@@ -115,7 +125,17 @@ export default function AuthPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            if (value === "teacher") {
+                              form.setValue("phoneNumber", "+");
+                            } else {
+                              form.setValue("phoneNumber", "");
+                            }
+                          }} 
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select your role" />
@@ -130,6 +150,32 @@ export default function AuthPage() {
                       </FormItem>
                     )}
                   />
+
+                  {form.watch("role") === "teacher" && (
+                    <FormField
+                      control={form.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number (with country code)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              placeholder="+1234567890"
+                              onChange={(e) => {
+                                let value = e.target.value;
+                                if (!value.startsWith('+')) {
+                                  value = '+' + value;
+                                }
+                                field.onChange(value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </>
               )}
 
