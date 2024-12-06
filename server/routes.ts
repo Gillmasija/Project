@@ -126,7 +126,8 @@ export function registerRoutes(app: Express) {
       .select({
         id: users.id,
         fullName: users.fullName,
-        avatar: users.avatar
+        avatar: users.avatar,
+        phoneNumber: users.phoneNumber
       })
       .from(teacherStudents)
       .innerJoin(users, eq(users.id, teacherStudents.teacherId))

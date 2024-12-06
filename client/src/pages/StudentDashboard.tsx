@@ -3,6 +3,8 @@ import type { TeacherSchedule } from "@db/schema";
 import Stats from "../components/dashboard/Stats";
 import AssignmentCard from "../components/dashboard/AssignmentCard";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { MessageCircle } from "lucide-react";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function StudentDashboard() {
@@ -32,6 +34,7 @@ export default function StudentDashboard() {
       return res.json();
     }
   });
+  
   const { data: teacherSchedule } = useQuery({
     queryKey: ["studentSchedule"],
     queryFn: async () => {
@@ -40,6 +43,13 @@ export default function StudentDashboard() {
       return res.json();
     }
   });
+
+  const handleWhatsAppContact = () => {
+    if (teacher?.phoneNumber) {
+      const whatsappUrl = `https://wa.me/${teacher.phoneNumber.replace(/\D/g, '')}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -93,6 +103,15 @@ export default function StudentDashboard() {
                   <div>
                     <h4 className="font-bold">{teacher.fullName}</h4>
                     <p className="text-sm text-muted-foreground">Your Mentor</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="mt-2"
+                      onClick={handleWhatsAppContact}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Message on WhatsApp
+                    </Button>
                   </div>
                 </div>
                 <div className="mt-4 p-4 bg-primary/5 rounded-lg">

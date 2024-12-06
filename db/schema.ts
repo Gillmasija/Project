@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("student"),
   fullName: text("full_name").notNull(),
   avatar: text("avatar").notNull(),
+  phoneNumber: text("phone_number"),
   createdAt: timestamp("created_at").defaultNow()
 });
 
