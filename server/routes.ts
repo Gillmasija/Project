@@ -146,9 +146,17 @@ export function registerRoutes(app: Express) {
             description: assignments.description,
             dueDate: assignments.dueDate,
             teacherId: assignments.teacherId,
-            createdAt: assignments.createdAt
+            studentId: assignments.studentId,
+            status: assignments.status,
+            createdAt: assignments.createdAt,
+            student: {
+              id: users.id,
+              fullName: users.fullName,
+              avatar: users.avatar
+            }
           })
           .from(assignments)
+          .leftJoin(users, eq(assignments.studentId, users.id))
           .where(eq(assignments.teacherId, req.user!.id))
           .orderBy(desc(assignments.createdAt))
       : await db
@@ -164,27 +172,45 @@ export function registerRoutes(app: Express) {
               submittedAt: submissions.submittedAt
             }
           })
-          .from(teacherStudents)
-          .innerJoin(assignments, eq(assignments.teacherId, teacherStudents.teacherId))
+          .from(assignments)
+          .where(eq(assignments.studentId, req.user!.id))
           .leftJoin(submissions, and(
             eq(submissions.assignmentId, assignments.id),
             eq(submissions.studentId, req.user!.id)
           ))
-          .where(eq(teacherStudents.studentId, req.user!.id))
           .orderBy(desc(assignments.createdAt));
 
     res.json(userAssignments);
   });
 
   app.post("/api/assignments", isAuthenticated, isTeacher, async (req, res) => {
-    const { title, description, dueDate } = req.body;
+    const { title, description, dueDate, studentId } = req.body;
+    
+    // Verify if the student is assigned to this teacher
+    if (studentId) {
+      const [studentTeacher] = await db
+        .select()
+        .from(teacherStudents)
+        .where(and(
+          eq(teacherStudents.teacherId, req.user!.id),
+          eq(teacherStudents.studentId, studentId)
+        ))
+        .limit(1);
+
+      if (!studentTeacher) {
+        return res.status(400).send("Student not found in your class");
+      }
+    }
+
     const [newAssignment] = await db
       .insert(assignments)
       .values({
         title,
         description,
         dueDate: new Date(dueDate),
-        teacherId: req.user!.id
+        teacherId: req.user!.id,
+        studentId: studentId || null,
+        status: "pending"
       })
       .returning();
 

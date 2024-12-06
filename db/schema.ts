@@ -24,6 +24,8 @@ export const assignments = pgTable("assignments", {
   description: text("description").notNull(),
   dueDate: timestamp("due_date").notNull(),
   teacherId: integer("teacher_id").references(() => users.id).notNull(),
+  studentId: integer("student_id").references(() => users.id),
+  status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow()
 });
 

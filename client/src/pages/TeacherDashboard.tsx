@@ -17,6 +17,7 @@ interface NewAssignment {
   title: string;
   description: string;
   dueDate: string;
+  studentId?: number;
 }
 
 export default function TeacherDashboard() {
@@ -28,7 +29,8 @@ export default function TeacherDashboard() {
     defaultValues: {
       title: "",
       description: "",
-      dueDate: ""
+      dueDate: "",
+      studentId: undefined
     }
   });
 
@@ -119,6 +121,30 @@ export default function TeacherDashboard() {
                         <FormControl>
                           <Input type="datetime-local" {...field} />
                         </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="studentId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assign to Student</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a student" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {students?.map((student) => (
+                              <SelectItem key={student.id} value={student.id.toString()}>
+                                {student.fullName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
