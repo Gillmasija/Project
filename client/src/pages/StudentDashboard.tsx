@@ -46,8 +46,16 @@ export default function StudentDashboard() {
 
   const handleWhatsAppContact = () => {
     if (teacher?.phoneNumber) {
-      const whatsappUrl = `https://wa.me/${teacher.phoneNumber.replace(/\D/g, '')}`;
+      // Remove any non-numeric characters and ensure it starts with a plus sign if needed
+      const formattedNumber = teacher.phoneNumber.replace(/\D/g, '');
+      const whatsappUrl = `https://wa.me/${formattedNumber}`;
       window.open(whatsappUrl, '_blank');
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Teacher's contact information is not available"
+      });
     }
   };
 
