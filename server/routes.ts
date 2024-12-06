@@ -61,6 +61,36 @@ export function registerRoutes(app: Express) {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
 
+  // Update user profile
+  app.put("/api/user/profile", isAuthenticated, async (req, res) => {
+    const { fullName, phoneNumber } = req.body;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        fullName: fullName || req.user!.fullName,
+        phoneNumber: phoneNumber || req.user!.phoneNumber,
+      })
+      .where(eq(users.id, req.user!.id))
+      .returning();
+
+    res.json(updatedUser);
+  });
+
+  // Delete user account
+  app.delete("/api/user", isAuthenticated, async (req, res) => {
+    await db
+      .delete(users)
+      .where(eq(users.id, req.user!.id));
+
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).send("Logout failed");
+      }
+      res.json({ message: "Account deleted successfully" });
+    });
+  });
+
   // Teacher routes
   app.get("/api/teacher/stats", isAuthenticated, isTeacher, async (req, res) => {
     const [assignmentCount] = await db
@@ -138,6 +168,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Assignment routes
+  // Get all assignments
   app.get("/api/assignments", isAuthenticated, async (req, res) => {
     const userAssignments = req.user!.role === "teacher"
       ? await db
@@ -182,6 +213,86 @@ export function registerRoutes(app: Express) {
           .orderBy(desc(assignments.createdAt));
 
     res.json(userAssignments);
+  });
+
+  // Get a single assignment
+  app.get("/api/assignments/:id", isAuthenticated, async (req, res) => {
+    const assignmentId = parseInt(req.params.id);
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, assignmentId))
+      .limit(1);
+
+    if (!assignment) {
+      return res.status(404).send("Assignment not found");
+    }
+
+    if (req.user!.role === "student" && assignment.studentId !== req.user!.id) {
+      return res.status(403).send("Not authorized to view this assignment");
+    }
+
+    if (req.user!.role === "teacher" && assignment.teacherId !== req.user!.id) {
+      return res.status(403).send("Not authorized to view this assignment");
+    }
+
+    res.json(assignment);
+  });
+
+  // Update an assignment
+  app.put("/api/assignments/:id", isAuthenticated, isTeacher, async (req, res) => {
+    const assignmentId = parseInt(req.params.id);
+    const { title, description, dueDate, studentId } = req.body;
+
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(and(
+        eq(assignments.id, assignmentId),
+        eq(assignments.teacherId, req.user!.id)
+      ))
+      .limit(1);
+
+    if (!assignment) {
+      return res.status(404).send("Assignment not found or not authorized");
+    }
+
+    const [updatedAssignment] = await db
+      .update(assignments)
+      .set({
+        title,
+        description,
+        dueDate: new Date(dueDate),
+        studentId: studentId || null
+      })
+      .where(eq(assignments.id, assignmentId))
+      .returning();
+
+    res.json(updatedAssignment);
+  });
+
+  // Delete an assignment
+  app.delete("/api/assignments/:id", isAuthenticated, isTeacher, async (req, res) => {
+    const assignmentId = parseInt(req.params.id);
+
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(and(
+        eq(assignments.id, assignmentId),
+        eq(assignments.teacherId, req.user!.id)
+      ))
+      .limit(1);
+
+    if (!assignment) {
+      return res.status(404).send("Assignment not found or not authorized");
+    }
+
+    await db
+      .delete(assignments)
+      .where(eq(assignments.id, assignmentId));
+
+    res.json({ message: "Assignment deleted successfully" });
   });
 
   app.post("/api/assignments", isAuthenticated, isTeacher, async (req, res) => {
@@ -265,20 +376,62 @@ export function registerRoutes(app: Express) {
     res.json(newSchedule);
   });
 
+  // Update schedule
   app.put("/api/teacher/schedule/:id", isAuthenticated, isTeacher, async (req, res) => {
     const scheduleId = parseInt(req.params.id);
-    const { isAvailable } = req.body;
+    const { isAvailable, startTime, endTime, title, description, studentId } = req.body;
 
-    const [updatedSchedule] = await db
-      .update(teacherSchedule)
-      .set({ isAvailable })
+    const [schedule] = await db
+      .select()
+      .from(teacherSchedule)
       .where(and(
         eq(teacherSchedule.id, scheduleId),
         eq(teacherSchedule.teacherId, req.user!.id)
       ))
+      .limit(1);
+
+    if (!schedule) {
+      return res.status(404).send("Schedule not found or not authorized");
+    }
+
+    const [updatedSchedule] = await db
+      .update(teacherSchedule)
+      .set({
+        isAvailable,
+        startTime: startTime || schedule.startTime,
+        endTime: endTime || schedule.endTime,
+        title: title || schedule.title,
+        description: description || schedule.description,
+        studentId: studentId || schedule.studentId
+      })
+      .where(eq(teacherSchedule.id, scheduleId))
       .returning();
 
     res.json(updatedSchedule);
+  });
+
+  // Delete schedule
+  app.delete("/api/teacher/schedule/:id", isAuthenticated, isTeacher, async (req, res) => {
+    const scheduleId = parseInt(req.params.id);
+
+    const [schedule] = await db
+      .select()
+      .from(teacherSchedule)
+      .where(and(
+        eq(teacherSchedule.id, scheduleId),
+        eq(teacherSchedule.teacherId, req.user!.id)
+      ))
+      .limit(1);
+
+    if (!schedule) {
+      return res.status(404).send("Schedule not found or not authorized");
+    }
+
+    await db
+      .delete(teacherSchedule)
+      .where(eq(teacherSchedule.id, scheduleId));
+
+    res.json({ message: "Schedule deleted successfully" });
   });
 
   app.get("/api/student/teacher-schedule", isAuthenticated, isStudent, async (req, res) => {
