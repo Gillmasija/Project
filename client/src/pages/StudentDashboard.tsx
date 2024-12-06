@@ -2,6 +2,7 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import Stats from "../components/dashboard/Stats";
 import AssignmentCard from "../components/dashboard/AssignmentCard";
 import { useQuery } from "@tanstack/react-query";
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function StudentDashboard() {
   const { data: stats } = useQuery({
@@ -30,6 +31,14 @@ export default function StudentDashboard() {
       return res.json();
     }
   });
+  const { data: teacherSchedule } = useQuery({
+    queryKey: ["studentSchedule"],
+    queryFn: async () => {
+      const res = await fetch("/api/student/teacher-schedule");
+      if (!res.ok) throw new Error("Failed to fetch schedule");
+      return res.json();
+    }
+  });
 
   return (
     <DashboardLayout>
@@ -38,8 +47,26 @@ export default function StudentDashboard() {
 
         <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
           <Stats data={stats || { assignments: 0, submissions: 0, completed: 0, pending: 0 }} />
-          <div className="bg-cover bg-center rounded-lg h-[200px]" 
-               style={{ backgroundImage: "url('https://images.unsplash.com/photo-1547226706-af7e2c20bcea')" }} />
+          <div className="space-y-4">
+            <h3 className="text-2xl font-bold">Your Scheduled Classes</h3>
+            <div className="space-y-2">
+              {teacherSchedule?.map((schedule) => (
+                <div key={schedule.id} className="bg-card p-4 rounded-lg border">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold">{schedule.title || "Class Session"}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {DAYS[schedule.dayOfWeek]}, {schedule.startTime} - {schedule.endTime}
+                      </p>
+                    </div>
+                  </div>
+                  {schedule.description && (
+                    <p className="mt-2 text-sm">{schedule.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">

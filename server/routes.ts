@@ -166,7 +166,7 @@ export function registerRoutes(app: Express) {
   });
 
   app.post("/api/teacher/schedule", isAuthenticated, isTeacher, async (req, res) => {
-    const { dayOfWeek, startTime, endTime } = req.body;
+    const { dayOfWeek, startTime, endTime, title, description, studentId } = req.body;
     
     const [newSchedule] = await db
       .insert(teacherSchedule)
@@ -175,6 +175,9 @@ export function registerRoutes(app: Express) {
         dayOfWeek,
         startTime,
         endTime,
+        title,
+        description,
+        studentId: studentId ? parseInt(studentId) : undefined,
         isAvailable: true
       })
       .returning();

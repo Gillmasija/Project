@@ -20,6 +20,9 @@ export default function TeacherSchedule() {
   const [dayOfWeek, setDayOfWeek] = useState<string>("1");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -32,8 +35,24 @@ export default function TeacherSchedule() {
     }
   });
 
+  const { data: students } = useQuery({
+    queryKey: ["students"],
+    queryFn: async () => {
+      const res = await fetch("/api/teacher/students");
+      if (!res.ok) throw new Error("Failed to fetch students");
+      return res.json();
+    }
+  });
+
   const createSchedule = useMutation({
-    mutationFn: async (data: { dayOfWeek: number; startTime: string; endTime: string }) => {
+    mutationFn: async (data: {
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      title?: string;
+      description?: string;
+      studentId?: number;
+    }) => {
       const res = await fetch("/api/teacher/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,8 +92,14 @@ export default function TeacherSchedule() {
     createSchedule.mutate({
       dayOfWeek: parseInt(dayOfWeek),
       startTime,
-      endTime
+      endTime,
+      title: title || undefined,
+      description: description || undefined,
+      studentId: selectedStudent ? parseInt(selectedStudent) : undefined
     });
+    setTitle("");
+    setDescription("");
+    setSelectedStudent("");
   };
 
   return (
@@ -84,31 +109,58 @@ export default function TeacherSchedule() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS.map((day, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {day}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                placeholder="Start time"
+              />
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                placeholder="End time"
+              />
+            </div>
+            
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Class Title"
+            />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Class Description"
+            />
+            
+            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
               <SelectTrigger>
-                <SelectValue placeholder="Select day" />
+                <SelectValue placeholder="Select student (optional)" />
               </SelectTrigger>
               <SelectContent>
-                {DAYS.map((day, index) => (
-                  <SelectItem key={index} value={index.toString()}>
-                    {day}
+                <SelectItem value="">No student assigned</SelectItem>
+                {students?.map((student: any) => (
+                  <SelectItem key={student.id} value={student.id.toString()}>
+                    {student.fullName}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              placeholder="Start time"
-            />
-            <Input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              placeholder="End time"
-            />
           </div>
           <Button type="submit" className="w-full">Add Time Slot</Button>
         </form>
@@ -123,19 +175,32 @@ export default function TeacherSchedule() {
                 <h3 className="font-bold mb-2">{day}</h3>
                 <div className="space-y-2">
                   {daySchedules.map((slot) => (
-                    <div key={slot.id} className="flex items-center justify-between bg-secondary/20 p-2 rounded">
-                      <span>
-                        {slot.startTime} - {slot.endTime}
-                      </span>
-                      <Button
-                        variant={slot.isAvailable ? "default" : "secondary"}
-                        onClick={() => toggleAvailability.mutate({
-                          id: slot.id,
-                          isAvailable: !slot.isAvailable
-                        })}
-                      >
-                        {slot.isAvailable ? "Available" : "Unavailable"}
-                      </Button>
+                    <div key={slot.id} className="bg-secondary/20 p-4 rounded space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{slot.title || "Available Time Slot"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {slot.startTime} - {slot.endTime}
+                          </p>
+                        </div>
+                        <Button
+                          variant={slot.isAvailable ? "default" : "secondary"}
+                          onClick={() => toggleAvailability.mutate({
+                            id: slot.id,
+                            isAvailable: !slot.isAvailable
+                          })}
+                        >
+                          {slot.isAvailable ? "Available" : "Unavailable"}
+                        </Button>
+                      </div>
+                      {slot.description && (
+                        <p className="text-sm">{slot.description}</p>
+                      )}
+                      {slot.studentId && students && (
+                        <div className="text-sm text-muted-foreground">
+                          Assigned to: {students.find((s: any) => s.id === slot.studentId)?.fullName}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
