@@ -26,10 +26,26 @@ function Router() {
     return <AuthPage />;
   }
 
+  if (user.role !== "teacher" && user.role !== "student") {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-destructive">Invalid Role</h1>
+        <p className="text-muted-foreground">Please contact administrator</p>
+      </div>
+    </div>;
+  }
+
   return (
     <Switch>
       <Route path="/" component={user.role === "teacher" ? TeacherDashboard : StudentDashboard} />
-      <Route>404 Page Not Found</Route>
+      <Route>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-destructive">404</h1>
+            <p className="text-muted-foreground">Page Not Found</p>
+          </div>
+        </div>
+      </Route>
     </Switch>
   );
 }
