@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useUser } from "../../hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -9,6 +10,24 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useUser();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Success",
+        description: "Successfully logged out"
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to logout. Please try again."
+      });
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,14 +45,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <Button 
             variant="secondary" 
-            onClick={async (e) => {
-              e.preventDefault();
-              try {
-                await logout();
-              } catch (error) {
-                console.error('Logout failed:', error);
-              }
-            }}
+            onClick={handleLogout}
           >
             Logout
           </Button>
