@@ -6,8 +6,9 @@ import AssignmentCard from "../components/dashboard/AssignmentCard";
 import TeacherSchedule from "../components/dashboard/TeacherSchedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -20,10 +21,27 @@ interface NewAssignment {
   studentId?: number;
 }
 
+interface Student {
+  id: number;
+  fullName: string;
+  avatar: string;
+  submissions?: number;
+  completedAssignments?: number;
+}
+
 export default function TeacherDashboard() {
   const [isNewAssignmentOpen, setIsNewAssignmentOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: students } = useQuery<Student[]>({
+    queryKey: ["students"],
+    queryFn: async () => {
+      const res = await fetch("/api/teacher/students");
+      if (!res.ok) throw new Error("Failed to fetch students");
+      return res.json();
+    }
+  });
 
   const form = useForm<NewAssignment>({
     defaultValues: {

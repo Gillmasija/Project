@@ -14,25 +14,38 @@ async function handleRequest(
   body?: InsertUser
 ): Promise<RequestResult> {
   try {
+    console.log(`Making ${method} request to ${url}`);
     const response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: body ? { 
+        "Content-Type": "application/json",
+      } : undefined,
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include",
     });
 
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    
     if (!response.ok) {
+      const errorData = isJson ? await response.json() : await response.text();
+      const errorMessage = isJson ? errorData.message : errorData;
+      
       if (response.status >= 500) {
-        return { ok: false, message: response.statusText };
+        console.error('Server error:', errorMessage);
+        return { ok: false, message: "Internal server error. Please try again later." };
       }
 
-      const message = await response.text();
-      return { ok: false, message };
+      console.error('Request failed:', errorMessage);
+      return { ok: false, message: errorMessage };
     }
 
+    const data = isJson ? await response.json() : await response.text();
+    console.log('Request successful:', data);
     return { ok: true };
   } catch (e: any) {
-    return { ok: false, message: e.toString() };
+    console.error('Request error:', e);
+    return { ok: false, message: "Network error. Please check your connection." };
   }
 }
 

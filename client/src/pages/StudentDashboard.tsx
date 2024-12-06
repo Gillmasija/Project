@@ -5,6 +5,7 @@ import AssignmentCard from "../components/dashboard/AssignmentCard";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function StudentDashboard() {

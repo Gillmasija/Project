@@ -39,19 +39,28 @@ export default function AuthPage() {
 
   async function onSubmit(data: InsertUser) {
     try {
+      console.log('Attempting to', isLogin ? 'login' : 'register', 'with:', { ...data, password: '***' });
       const result = await (isLogin ? login(data) : register(data));
       if (!result.ok) {
+        console.error('Auth error:', result.message);
         toast({
           variant: "destructive",
-          title: "Error",
+          title: "Authentication Error",
           description: result.message
         });
+      } else {
+        toast({
+          title: "Success",
+          description: `Successfully ${isLogin ? 'logged in' : 'registered'}!`
+        });
+        // Redirect will happen automatically through the useUser hook
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message
+        description: error.message || "An unexpected error occurred"
       });
     }
   }
