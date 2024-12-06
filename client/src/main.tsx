@@ -23,14 +23,7 @@ function Router() {
   }
 
   if (!user) {
-    return (
-      <Switch>
-        <Route path="/" component={AuthPage} />
-        <Route>
-          <AuthPage />
-        </Route>
-      </Switch>
-    );
+    return <AuthPage />;
   }
 
   if (user.role !== "teacher" && user.role !== "student") {
