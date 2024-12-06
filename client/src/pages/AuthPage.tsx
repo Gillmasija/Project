@@ -22,7 +22,7 @@ export default function AuthPage() {
       password: "",
       role: "student",
       fullName: "",
-      avatar: `https://i.pravatar.cc/150?u=${Math.random()}`
+      avatar: "/edudash.png"
     }
   });
 
