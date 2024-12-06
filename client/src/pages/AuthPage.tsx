@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useUser } from "../hooks/use-user";
 import { insertUserSchema, type InsertUser } from "@db/schema";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +16,21 @@ export default function AuthPage() {
   const { login, register } = useUser();
   const { toast } = useToast();
 
-  const form = useForm<InsertUser>({
-    resolver: zodResolver(insertUserSchema),
+  const registerSchema = insertUserSchema.extend({
+    confirmPassword: z.string()
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+  type RegisterFormData = z.infer<typeof registerSchema>;
+
+  const form = useForm<RegisterFormData>({
+    resolver: zodResolver(isLogin ? insertUserSchema : registerSchema),
     defaultValues: {
       username: "",
       password: "",
+      confirmPassword: "",
       role: "student",
       fullName: "",
       avatar: "/edudash.png"
@@ -126,6 +137,22 @@ export default function AuthPage() {
                   </FormItem>
                 )}
               />
+
+              {!isLogin && (
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="space-y-2">
                 <Button type="submit" className="w-full">

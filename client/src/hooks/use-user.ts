@@ -78,6 +78,7 @@ export function useUser() {
     onSuccess: () => {
       queryClient.clear(); // Clear all queries and cache
       queryClient.resetQueries(); // Reset all queries to their initial state
+      window.location.href = '/'; // Force a full page reload to clear all state
     },
   });
 
