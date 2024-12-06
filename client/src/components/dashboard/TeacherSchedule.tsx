@@ -14,6 +14,9 @@ interface Schedule {
   startTime: string;
   endTime: string;
   isAvailable: boolean;
+  title?: string;
+  description?: string;
+  studentId?: number;
 }
 
 export default function TeacherSchedule() {

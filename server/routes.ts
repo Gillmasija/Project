@@ -1,12 +1,65 @@
 import { type Express } from "express";
+import express from "express";
 import { db } from "../db";
 import { setupAuth, isAuthenticated, isTeacher, isStudent } from "./auth";
 import { users, assignments, submissions, teacherStudents, teacherSchedule } from "@db/schema";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req: Express.Request, file: Express.Multer.File, cb: Function) => {
+    const uploadDir = 'uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req: Express.Request, file: Express.Multer.File, cb: Function) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage,
+  fileFilter: (req: Express.Request, file: Express.Multer.File, cb: Function) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
+
 export function registerRoutes(app: Express) {
-  // Set up authentication routes
   setupAuth(app);
+
+  // Avatar upload route
+  app.post("/api/user/avatar", isAuthenticated, upload.single('avatar'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).send("No file uploaded");
+      }
+
+      const avatarUrl = `/uploads/${req.file.filename}`;
+      
+      await db
+        .update(users)
+        .set({ avatar: avatarUrl })
+        .where(eq(users.id, req.user!.id));
+
+      res.json({ avatar: avatarUrl });
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  // Serve uploaded files
+  app.use('/uploads', express.static('uploads'));
 
   // Teacher routes
   app.get("/api/teacher/stats", isAuthenticated, isTeacher, async (req, res) => {

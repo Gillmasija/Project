@@ -1,4 +1,5 @@
 import DashboardLayout from "../components/layout/DashboardLayout";
+import type { TeacherSchedule } from "@db/schema";
 import Stats from "../components/dashboard/Stats";
 import AssignmentCard from "../components/dashboard/AssignmentCard";
 import { useQuery } from "@tanstack/react-query";
@@ -50,7 +51,7 @@ export default function StudentDashboard() {
           <div className="space-y-4">
             <h3 className="text-2xl font-bold">Your Scheduled Classes</h3>
             <div className="space-y-2">
-              {teacherSchedule?.map((schedule) => (
+              {teacherSchedule?.map((schedule: TeacherSchedule) => (
                 <div key={schedule.id} className="bg-card p-4 rounded-lg border">
                   <div className="flex justify-between items-start">
                     <div>
