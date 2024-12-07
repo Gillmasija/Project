@@ -8,7 +8,7 @@ channel = "stable-24_05"
 [deployment]
 deploymentTarget = "cloudrun"
 build = ["npm", "run", "build"]
-run = ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+run = ["sh", "-c", "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
 
 [[ports]]
 localPort = 5000
@@ -38,5 +38,5 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+args = "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
 waitForPort = 8000

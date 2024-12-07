@@ -2,26 +2,32 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
-    role = models.CharField(max_length=10, default='student')
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('teacher', 'Teacher'),
+    ]
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='student')
     avatar = models.URLField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    full_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255, blank=True)
 
-    # Override groups and user_permissions to fix reverse accessor clashes
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
         blank=True,
         help_text='The groups this user belongs to.',
-        related_name='api_user_groups'
+        related_name='api_users'
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
         verbose_name='user permissions',
         blank=True,
         help_text='Specific permissions for this user.',
-        related_name='api_user_permissions'
+        related_name='api_users_permissions'
     )
+
+    def __str__(self):
+        return self.username
 
 class TeacherStudent(models.Model):
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='teaching')
