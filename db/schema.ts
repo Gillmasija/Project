@@ -47,6 +47,7 @@ export const teacherSchedule = pgTable("teacher_schedule", {
   isAvailable: boolean("is_available").notNull().default(true),
   title: text("title"),
   description: text("description"),
+  cancellationReason: text("cancellation_reason"),
   studentId: integer("student_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow()
 });

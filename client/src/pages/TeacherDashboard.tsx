@@ -29,10 +29,55 @@ interface Student {
   completedAssignments?: number;
 }
 
+interface AvailabilityForm {
+  isAvailable: boolean;
+  cancellationReason?: string;
+}
+
 export default function TeacherDashboard() {
   const [isNewAssignmentOpen, setIsNewAssignmentOpen] = useState(false);
+  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Assignment form
+  const assignmentForm = useForm<NewAssignment>({
+    defaultValues: {
+      title: "",
+      description: "",
+      dueDate: "",
+      studentId: undefined
+    }
+  });
+
+  // Availability form
+  const availabilityForm = useForm<AvailabilityForm>({
+    defaultValues: {
+      isAvailable: true,
+      cancellationReason: ""
+    }
+  });
+
+  const updateAvailability = useMutation({
+    mutationFn: async (data: AvailabilityForm) => {
+      const res = await fetch("/api/teacher/schedule/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to update availability");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherSchedule"] });
+      setIsAvailabilityOpen(false);
+      availabilityForm.reset();
+      toast({
+        title: "Success",
+        description: "Availability updated successfully"
+      });
+    }
+  });
 
   const { data: students } = useQuery<Student[]>({
     queryKey: ["students"],
@@ -104,8 +149,8 @@ export default function TeacherDashboard() {
               <DialogHeader>
                 <DialogTitle>New Assignment</DialogTitle>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(data => createAssignment.mutate(data))} className="space-y-4">
+              <Form {...assignmentForm}>
+                <form onSubmit={assignmentForm.handleSubmit(data => createAssignment.mutate(data))} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -195,7 +240,61 @@ export default function TeacherDashboard() {
             </div>
             <div>
               <h3 className="text-2xl font-bold mb-4">Schedule Management</h3>
-              <TeacherSchedule />
+              <div className="space-y-4">
+                <Dialog open={isAvailabilityOpen} onOpenChange={setIsAvailabilityOpen}>
+                  <DialogTrigger asChild>
+                    <Button>Manage Availability</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Manage Availability</DialogTitle>
+                    </DialogHeader>
+                    <Form {...availabilityForm}>
+                      <form onSubmit={availabilityForm.handleSubmit((data) => updateAvailability.mutate(data))} className="space-y-4">
+                        <FormField
+                          control={availabilityForm.control}
+                          name="isAvailable"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Availability Status</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select availability" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="true">Available</SelectItem>
+                                  <SelectItem value="false">Not Available</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {!availabilityForm.watch("isAvailable") && (
+                          <FormField
+                            control={availabilityForm.control}
+                            name="cancellationReason"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Cancellation Reason</FormLabel>
+                                <FormControl>
+                                  <Textarea {...field} placeholder="Please provide a reason for cancellation" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                        
+                        <Button type="submit" className="w-full">Update Availability</Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+                <TeacherSchedule />
+              </div>
             </div>
           </div>
         </div>
