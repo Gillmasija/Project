@@ -83,19 +83,22 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_SECURE = False  # Set to True in production
 
-# Static files configuration
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
+STATICFILES_DIRS = []
+if os.path.exists(os.path.join(BASE_DIR, 'dist/public')):
+    STATICFILES_DIRS.extend([
+        os.path.join(BASE_DIR, 'dist/public'),
+        os.path.join(BASE_DIR, 'dist/public/assets'),
+    ])
 
-# Media files
+# Media files (User uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Create directories if they don't exist
-for dir_path in [STATIC_ROOT, MEDIA_ROOT] + STATICFILES_DIRS:
+for dir_path in [STATIC_ROOT, MEDIA_ROOT]:
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 

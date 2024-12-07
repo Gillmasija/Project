@@ -9,5 +9,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
-    path('', include('api.urls')),
+    # Serve the frontend for all other routes
+    re_path(r'^(?!api/).*$', TemplateView.as_view(template_name='index.html')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
