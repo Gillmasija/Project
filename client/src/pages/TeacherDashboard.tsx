@@ -32,11 +32,13 @@ interface Student {
 interface AvailabilityForm {
   isAvailable: boolean;
   cancellationReason?: string;
+  scheduleId?: number;
 }
 
 export default function TeacherDashboard() {
   const [isNewAssignmentOpen, setIsNewAssignmentOpen] = useState(false);
   const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -60,10 +62,13 @@ export default function TeacherDashboard() {
 
   const updateAvailability = useMutation({
     mutationFn: async (data: AvailabilityForm) => {
-      const res = await fetch("/api/teacher/schedule/availability", {
-        method: "POST",
+      const res = await fetch(`/api/teacher/schedule/${data.scheduleId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          isAvailable: data.isAvailable,
+          cancellationReason: data.cancellationReason
+        })
       });
       if (!res.ok) throw new Error("Failed to update availability");
       return res.json();
@@ -74,7 +79,7 @@ export default function TeacherDashboard() {
       availabilityForm.reset();
       toast({
         title: "Success",
-        description: "Availability updated successfully"
+        description: "Schedule updated successfully"
       });
     }
   });
@@ -253,47 +258,55 @@ export default function TeacherDashboard() {
                       <form onSubmit={availabilityForm.handleSubmit((data) => updateAvailability.mutate(data))} className="space-y-4">
                         <FormField
                           control={availabilityForm.control}
-                          name="isAvailable"
+                          name="cancellationReason"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Availability Status</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select availability" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="true">Available</SelectItem>
-                                  <SelectItem value="false">Not Available</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <FormLabel>Reason for Cancellation</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Please provide a reason for cancelling this slot" />
+                              </FormControl>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
-                        {!availabilityForm.watch("isAvailable") && (
-                          <FormField
-                            control={availabilityForm.control}
-                            name="cancellationReason"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Cancellation Reason</FormLabel>
-                                <FormControl>
-                                  <Textarea {...field} placeholder="Please provide a reason for cancellation" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                        
-                        <Button type="submit" className="w-full">Update Availability</Button>
+                        <Button type="submit" className="w-full">Cancel Slot</Button>
                       </form>
                     </Form>
                   </DialogContent>
                 </Dialog>
-                <TeacherSchedule />
+                <div className="space-y-4">
+                  {schedule?.map((slot) => (
+                    <div key={slot.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                      <div>
+                        <p className="font-medium">{slot.title || "Class Session"}</p>
+                        <p className="text-sm text-gray-500">
+                          {slot.dayOfWeek}, {slot.startTime} - {slot.endTime}
+                        </p>
+                        {!slot.isAvailable && (
+                          <p className="text-sm text-red-500">
+                            Cancelled: {slot.cancellationReason}
+                          </p>
+                        )}
+                      </div>
+                      {slot.isAvailable && (
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            setSelectedSlot(slot.id);
+                            setIsAvailabilityOpen(true);
+                            availabilityForm.reset({
+                              isAvailable: false,
+                              scheduleId: slot.id,
+                              cancellationReason: ""
+                            });
+                          }}
+                        >
+                          Cancel Slot
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
