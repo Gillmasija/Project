@@ -9,8 +9,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
-    # Serve the frontend for all other routes
-    re_path(r'^(?!api/).*$', TemplateView.as_view(template_name='index.html')),
+    # Serve static files in development
+    path('static/<path:path>', serve, {'document_root': settings.STATIC_ROOT}),
+    # Serve the React application for all other routes
+    re_path(r'^(?!api/|static/|media/).*$', TemplateView.as_view(template_name='client/index.html')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:
