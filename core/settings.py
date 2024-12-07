@@ -62,7 +62,7 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             os.path.join(BASE_DIR, 'templates'),
-            os.path.join(BASE_DIR, 'dist'),  # React build output directory
+            os.path.join(BASE_DIR, 'dist', 'public'),  # React build output directory
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -90,14 +90,18 @@ SESSION_COOKIE_SECURE = False  # Set to True in production
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = []
+if os.path.exists(os.path.join(BASE_DIR, 'dist/public')):
+    STATICFILES_DIRS.extend([
+        os.path.join(BASE_DIR, 'dist/public'),
+        os.path.join(BASE_DIR, 'dist/public/assets'),
+    ])
 
-# Add dist directory to STATICFILES_DIRS if it exists
-if os.path.exists(os.path.join(BASE_DIR, 'dist')):
-    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'dist'))
-
-# Add static directory to STATICFILES_DIRS if it exists
 if os.path.exists(os.path.join(BASE_DIR, 'static')):
     STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
+
+# Ensure directories exist
+for directory in [STATIC_ROOT] + STATICFILES_DIRS:
+    os.makedirs(directory, exist_ok=True)
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
