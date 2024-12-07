@@ -65,14 +65,18 @@ SESSION_COOKIE_SECURE = False  # Set to True in production
 # Static files configuration
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = []
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
-# Configure static files and templates based on development/production
-if os.path.exists(os.path.join(BASE_DIR, 'client/dist')):
-    STATICFILES_DIRS.extend([
-        os.path.join(BASE_DIR, 'client/dist'),
-        os.path.join(BASE_DIR, 'client/dist/assets'),
-    ])
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Create directories if they don't exist
+for dir_path in [STATIC_ROOT, MEDIA_ROOT] + STATICFILES_DIRS:
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -83,11 +87,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('PGDATABASE'),
-        'USER': os.getenv('PGUSER'),
-        'PASSWORD': os.getenv('PGPASSWORD'),
-        'HOST': os.getenv('PGHOST'),
-        'PORT': os.getenv('PGPORT'),
+        'NAME': os.getenv('PGDATABASE', ''),
+        'USER': os.getenv('PGUSER', ''),
+        'PASSWORD': os.getenv('PGPASSWORD', ''),
+        'HOST': os.getenv('PGHOST', ''),
+        'PORT': os.getenv('PGPORT', '5432'),
     }
 }
 

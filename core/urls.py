@@ -9,7 +9,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
-    re_path(r'^$', TemplateView.as_view(template_name='index.html')),
-    re_path(r'^(?!api/|admin/|media/|static/).*$', 
-            TemplateView.as_view(template_name='index.html')),
+    path('', include('api.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -15,9 +15,9 @@ def home(request):
         return redirect('teacher_dashboard')
     elif request.user.role == 'student':
         return redirect('student_dashboard')
-    else:
-        messages.error(request, 'Invalid user role')
-        return redirect('login')
+    
+    messages.error(request, 'Invalid user role')
+    return redirect('login')
 
 @require_http_methods(["GET", "POST"])
 def register(request):
