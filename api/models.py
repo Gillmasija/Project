@@ -11,20 +11,24 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     full_name = models.CharField(max_length=255, blank=True)
 
+    # Use related_name to avoid clashes with auth.User
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
         blank=True,
         help_text='The groups this user belongs to.',
-        related_name='api_users'
+        related_name='custom_user_set'
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
         verbose_name='user permissions',
         blank=True,
         help_text='Specific permissions for this user.',
-        related_name='api_users_permissions'
+        related_name='custom_user_permission_set'
     )
+
+    class Meta:
+        swappable = 'AUTH_USER_MODEL'
 
     def __str__(self):
         return self.username
