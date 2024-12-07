@@ -29,6 +29,16 @@ interface Student {
   completedAssignments?: number;
 }
 
+interface Schedule {
+  id: number;
+  title?: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  cancellationReason?: string;
+}
+
 interface AvailabilityForm {
   isAvailable: boolean;
   cancellationReason?: string;
@@ -116,6 +126,15 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/assignments");
       if (!res.ok) throw new Error("Failed to fetch assignments");
+      return res.json();
+    }
+  });
+
+  const { data: schedule } = useQuery<Schedule[]>({
+    queryKey: ["teacherSchedule"],
+    queryFn: async () => {
+      const res = await fetch("/api/teacher/schedule");
+      if (!res.ok) throw new Error("Failed to fetch schedule");
       return res.json();
     }
   });
