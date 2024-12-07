@@ -25,14 +25,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -45,7 +42,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'client', 'dist')],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,6 +54,13 @@ TEMPLATES = [
         },
     },
 ]
+
+# Session configuration
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_SECURE = False  # Set to True in production
 
 # Static files configuration
 STATIC_URL = '/static/'
@@ -113,10 +117,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = []
-if os.path.exists(os.path.join(BASE_DIR, 'client/dist')):
+if os.path.exists(os.path.join(BASE_DIR, 'dist/public')):
     STATICFILES_DIRS.extend([
-        os.path.join(BASE_DIR, 'client/dist'),
-        os.path.join(BASE_DIR, 'client/dist/assets'),
+        os.path.join(BASE_DIR, 'dist/public'),
+        os.path.join(BASE_DIR, 'dist/public/assets'),
     ])
 
 # Media files (User uploads)
@@ -159,3 +163,8 @@ if DEBUG:
 
 # Custom user model
 AUTH_USER_MODEL = 'api.User'
+
+# Auth settings
+LOGIN_REDIRECT_URL = 'home'
+LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = 'login'

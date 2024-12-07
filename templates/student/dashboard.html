@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-orange-600">Student Dashboard</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-700">Welcome, {{ request.user.full_name }}</span>
+                    <a href="{% url 'logout' %}" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Assignments</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-orange-600">{{ stats.total_assignments }}</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Completed</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-orange-600">{{ stats.completed_assignments }}</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-orange-600">{{ stats.pending_assignments }}</dd>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Teacher Info -->
+            {% if teacher %}
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg font-medium text-gray-900">Your Teacher</h3>
+                </div>
+                <div class="px-4 py-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            {% if teacher.avatar %}
+                            <img class="h-12 w-12 rounded-full" src="{{ teacher.avatar }}" alt="">
+                            {% else %}
+                            <div class="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
+                                <span class="text-orange-600 font-bold text-xl">
+                                    {{ teacher.full_name|make_list|first|upper }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ teacher.full_name }}</p>
+                            {% if teacher.phone_number %}
+                            <p class="text-sm text-gray-500">{{ teacher.phone_number }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Schedule -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg font-medium text-gray-900">Class Schedule</h3>
+                </div>
+                <ul class="divide-y divide-gray-200">
+                    {% for session in schedule %}
+                    <li class="px-4 py-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ session.title|default:"Class Session" }}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                {{ session.get_day_of_week_display }}, {{ session.start_time }} - {{ session.end_time }}
+                            </p>
+                            {% if session.description %}
+                            <p class="text-sm text-gray-500 mt-1">{{ session.description }}</p>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="px-4 py-4 text-center text-gray-500">No scheduled classes</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Assignments -->
+        <div class="mt-6">
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg font-medium text-gray-900">Your Assignments</h3>
+                </div>
+                <ul class="divide-y divide-gray-200">
+                    {% for assignment in assignments %}
+                    <li class="px-4 py-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ assignment.title }}</p>
+                                <p class="text-sm text-gray-500">Due: {{ assignment.due_date|date }}</p>
+                                <p class="text-sm text-gray-500 mt-1">{{ assignment.description }}</p>
+                            </div>
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if assignment.status == 'completed' %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ assignment.status|title }}
+                            </span>
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="px-4 py-4 text-center text-gray-500">No assignments yet</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,14 +1,12 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
+from django.contrib.auth import views as auth_views
 from . import views
 
-router = DefaultRouter()
-router.register(r'users', views.UserViewSet)
-router.register(r'teacher-students', views.TeacherStudentViewSet, basename='teacher-students')
-router.register(r'assignments', views.AssignmentViewSet, basename='assignments')
-router.register(r'submissions', views.SubmissionViewSet, basename='submissions')
-router.register(r'teacher-schedules', views.TeacherScheduleViewSet, basename='teacher-schedules')
-
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', views.home, name='home'),
+    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('register/', views.register, name='register'),
+    path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
+    path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
 ]

@@ -1,110 +1,98 @@
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.contrib import messages
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from .models import User, TeacherStudent, Assignment, Submission, TeacherSchedule
-from .serializers import (
-    UserSerializer, TeacherStudentSerializer, AssignmentSerializer,
-    SubmissionSerializer, TeacherScheduleSerializer
-)
 
-class IsTeacherOrStudent(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.role in ['teacher', 'student']
+def home(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    if request.user.role == 'teacher':
+        return redirect('teacher_dashboard')
+    elif request.user.role == 'student':
+        return redirect('student_dashboard')
+    else:
+        messages.error(request, 'Invalid user role')
+        return redirect('login')
 
-class IsTeacher(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.role == 'teacher'
-
-class IsStudent(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.role == 'student'
-
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    @action(detail=False, methods=['get'])
-    def me(self, request):
-        serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
-    def teacher_stats(self, request):
-        assignment_count = Assignment.objects.filter(teacher=request.user).count()
-        submission_count = Submission.objects.filter(
-            assignment__teacher=request.user
-        ).count()
-
-        return Response({
-            'assignments': assignment_count,
-            'submissions': submission_count,
-            'completed': submission_count,
-            'pending': assignment_count - submission_count
-        })
-
-    @action(detail=False, methods=['get'], permission_classes=[IsStudent])
-    def student_stats(self, request):
-        assignment_count = Assignment.objects.filter(student=request.user).count()
-        submission_count = Submission.objects.filter(student=request.user).count()
-
-        return Response({
-            'assignments': assignment_count,
-            'submissions': submission_count,
-            'completed': submission_count,
-            'pending': assignment_count - submission_count
-        })
-
-class TeacherStudentViewSet(viewsets.ModelViewSet):
-    serializer_class = TeacherStudentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherOrStudent]
-
-    def get_queryset(self):
-        if self.request.user.role == 'teacher':
-            return TeacherStudent.objects.filter(teacher=self.request.user)
-        return TeacherStudent.objects.filter(student=self.request.user)
-
-class AssignmentViewSet(viewsets.ModelViewSet):
-    serializer_class = AssignmentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherOrStudent]
-
-    def get_queryset(self):
-        if self.request.user.role == 'teacher':
-            return Assignment.objects.filter(teacher=self.request.user)
-        return Assignment.objects.filter(student=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(teacher=self.request.user)
-
-class SubmissionViewSet(viewsets.ModelViewSet):
-    serializer_class = SubmissionSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherOrStudent]
-
-    def get_queryset(self):
-        if self.request.user.role == 'teacher':
-            return Submission.objects.filter(assignment__teacher=self.request.user)
-        return Submission.objects.filter(student=self.request.user)
-
-    def perform_create(self, serializer):
-        assignment = get_object_or_404(
-            Assignment, 
-            id=self.request.data.get('assignment'),
-            student=self.request.user
+@require_http_methods(["GET", "POST"])
+def register(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        role = request.POST.get('role')
+        full_name = request.POST.get('full_name')
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists')
+            return redirect('register')
+        
+        if role not in ['teacher', 'student']:
+            messages.error(request, 'Invalid role selected')
+            return redirect('register')
+        
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            role=role,
+            full_name=full_name
         )
-        serializer.save(student=self.request.user, assignment=assignment)
+        login(request, user)
+        return redirect('home')
+    
+    return render(request, 'registration/register.html')
 
-class TeacherScheduleViewSet(viewsets.ModelViewSet):
-    serializer_class = TeacherScheduleSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTeacherOrStudent]
+@login_required
+def teacher_dashboard(request):
+    if request.user.role != 'teacher':
+        messages.error(request, 'Access denied. Teacher privileges required.')
+        return redirect('home')
+    
+    context = {
+        'students': TeacherStudent.objects.filter(teacher=request.user).select_related('student'),
+        'assignments': Assignment.objects.filter(teacher=request.user),
+        'schedule': TeacherSchedule.objects.filter(teacher=request.user),
+        'stats': {
+            'total_students': TeacherStudent.objects.filter(teacher=request.user).count(),
+            'total_assignments': Assignment.objects.filter(teacher=request.user).count(),
+            'total_submissions': Submission.objects.filter(
+                assignment__teacher=request.user
+            ).count(),
+        }
+    }
+    return render(request, 'teacher/dashboard.html', context)
 
-    def get_queryset(self):
-        if self.request.user.role == 'teacher':
-            return TeacherSchedule.objects.filter(teacher=self.request.user)
-        return TeacherSchedule.objects.filter(
-            teacher__teacherstudent__student=self.request.user
-        )
+@login_required
+def student_dashboard(request):
+    if request.user.role != 'student':
+        messages.error(request, 'Access denied. Student privileges required.')
+        return redirect('home')
+    
+    teacher_student = TeacherStudent.objects.filter(student=request.user).first()
+    
+    context = {
+        'teacher': teacher_student.teacher if teacher_student else None,
+        'assignments': Assignment.objects.filter(student=request.user),
+        'schedule': TeacherSchedule.objects.filter(
+            teacher=teacher_student.teacher if teacher_student else None,
+            is_available=True
+        ),
+        'stats': {
+            'total_assignments': Assignment.objects.filter(student=request.user).count(),
+            'completed_assignments': Assignment.objects.filter(
+                student=request.user,
+                status='completed'
+            ).count(),
+            'pending_assignments': Assignment.objects.filter(
+                student=request.user,
+                status='pending'
+            ).count(),
+        }
+    }
+    return render(request, 'student/dashboard.html', context)
 
-    def perform_create(self, serializer):
-        serializer.save(teacher=self.request.user)
+# Remove REST framework specific code as we're using pure Django views now
