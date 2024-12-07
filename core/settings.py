@@ -62,7 +62,7 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             os.path.join(BASE_DIR, 'templates'),
-            os.path.join(BASE_DIR, 'client'),  # Add client directory for React app
+            os.path.join(BASE_DIR, 'dist'),  # React build output directory
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -90,23 +90,23 @@ SESSION_COOKIE_SECURE = False  # Set to True in production
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = []
-if os.path.exists(os.path.join(BASE_DIR, 'dist/public')):
-    STATICFILES_DIRS.extend([
-        os.path.join(BASE_DIR, 'dist/public'),
-        os.path.join(BASE_DIR, 'dist/public/assets'),
-    ])
+
+# Add dist directory to STATICFILES_DIRS if it exists
+if os.path.exists(os.path.join(BASE_DIR, 'dist')):
+    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'dist'))
+
+# Add static directory to STATICFILES_DIRS if it exists
+if os.path.exists(os.path.join(BASE_DIR, 'static')):
+    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Create directories if they don't exist
-for dir_path in [STATIC_ROOT, MEDIA_ROOT]:
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Create required directories
+required_dirs = [STATIC_ROOT, MEDIA_ROOT] + STATICFILES_DIRS
+for dir_path in required_dirs:
+    os.makedirs(dir_path, exist_ok=True)
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -114,11 +114,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('PGDATABASE', ''),
-        'USER': os.getenv('PGUSER', ''),
-        'PASSWORD': os.getenv('PGPASSWORD', ''),
-        'HOST': os.getenv('PGHOST', ''),
-        'PORT': os.getenv('PGPORT', '5432'),
+        'NAME': os.getenv('PGDATABASE'),
+        'USER': os.getenv('PGUSER'),
+        'PASSWORD': os.getenv('PGPASSWORD'),
+        'HOST': os.getenv('PGHOST'),
+        'PORT': os.getenv('PGPORT'),
     }
 }
 
