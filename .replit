@@ -26,13 +26,23 @@ name = "Project"
 mode = "parallel"
 author = "agent"
 
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
 [[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Django Server"
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Django Migrations"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Django Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"

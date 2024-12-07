@@ -45,7 +45,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'client/dist')],
+        'DIRS': [os.path.join(BASE_DIR, 'client', 'dist')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,6 +57,21 @@ TEMPLATES = [
         },
     },
 ]
+
+# Static files configuration
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = []
+
+# Configure static files and templates based on development/production
+if os.path.exists(os.path.join(BASE_DIR, 'client/dist')):
+    STATICFILES_DIRS.extend([
+        os.path.join(BASE_DIR, 'client/dist'),
+        os.path.join(BASE_DIR, 'client/dist/assets'),
+    ])
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -121,6 +136,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+]
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -131,6 +150,12 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# Ensure development mode settings
+if DEBUG:
+    MIDDLEWARE.append('django.middleware.csrf.CsrfViewMiddleware')
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
 
 # Custom user model
 AUTH_USER_MODEL = 'api.User'
