@@ -42,6 +42,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://*.replit.dev",
+    "https://*.replit.app"
+]
+
+# Allow credentials
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 MIDDLEWARE = [
