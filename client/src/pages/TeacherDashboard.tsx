@@ -45,11 +45,46 @@ interface NewScheduleForm {
   description?: string;
 }
 
+interface AvailabilityForm {
+  cancellationReason: string;
+  scheduleId?: number;
+}
+
 export default function TeacherDashboard() {
   const [isNewAssignmentOpen, setIsNewAssignmentOpen] = useState(false);
   const [isNewScheduleOpen, setIsNewScheduleOpen] = useState(false);
+  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const availabilityForm = useForm<AvailabilityForm>({
+    defaultValues: {
+      cancellationReason: "",
+      scheduleId: undefined
+    }
+  });
+
+  const updateAvailability = useMutation({
+    mutationFn: async (data: AvailabilityForm) => {
+      const res = await fetch(`/api/teacher/schedule/${selectedSlot}/availability`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to update availability");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherSchedule"] });
+      setIsAvailabilityOpen(false);
+      availabilityForm.reset();
+      toast({
+        title: "Success",
+        description: "Schedule availability updated successfully"
+      });
+    }
+  });
 
   const newScheduleForm = useForm<NewScheduleForm>({
     defaultValues: {
@@ -348,16 +383,53 @@ export default function TeacherDashboard() {
                 </Dialog>
               </div>
               <div className="space-y-4">
-                {schedule?.map((slot) => (
-                  <div key={slot.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow">
-                    <div>
-                      <p className="font-medium">{slot.title || "Class Session"}</p>
-                      <p className="text-sm text-gray-500">
-                        {slot.dayOfWeek}, {slot.startTime} - {slot.endTime}
-                      </p>
+                <div className="space-y-4">
+                  {schedule?.map((slot) => (
+                    <div key={slot.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                      <div>
+                        <p className="font-medium">{slot.title || "Class Session"}</p>
+                        <p className="text-sm text-gray-500">
+                          {slot.dayOfWeek}, {slot.startTime} - {slot.endTime}
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedSlot(slot.id);
+                          setIsAvailabilityOpen(true);
+                        }}
+                      >
+                        Manage Availability
+                      </Button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                
+                <Dialog open={isAvailabilityOpen} onOpenChange={setIsAvailabilityOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Manage Availability</DialogTitle>
+                    </DialogHeader>
+                    <Form {...availabilityForm}>
+                      <form onSubmit={availabilityForm.handleSubmit((data) => updateAvailability.mutate(data))} className="space-y-4">
+                        <FormField
+                          control={availabilityForm.control}
+                          name="cancellationReason"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Reason for Cancellation</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Please provide a reason for cancelling this slot" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full">Cancel Slot</Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
