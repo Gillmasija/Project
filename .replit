@@ -52,6 +52,10 @@ args = "Start application"
 task = "workflow.run"
 args = "Build Frontend"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Database Migration"
+
 [[workflows.workflow]]
 name = "Django Server"
 author = "agent"
@@ -109,3 +113,17 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run build && python manage.py collectstatic --noinput"
+
+[[workflows.workflow]]
+name = "Database Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run db:push"

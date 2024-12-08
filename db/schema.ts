@@ -2,7 +2,7 @@ import { pgTable, serial, timestamp, boolean, text, varchar, integer } from "dri
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const users = pgTable("drizzle_users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
@@ -10,7 +10,9 @@ export const users = pgTable("users", {
   fullName: varchar("full_name", { length: 255 }).notNull(),
   avatar: varchar("avatar", { length: 255 }),
   phoneNumber: varchar("phone_number", { length: 50 }),
-  createdAt: timestamp("created_at").defaultNow()
+  createdAt: timestamp("created_at").defaultNow(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastLogin: timestamp("last_login")
 });
 
 export const teacherStudents = pgTable("teacher_students", {
