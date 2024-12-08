@@ -153,6 +153,12 @@ export function setupAuth(app: Express) {
         .values({
           ...result.data,
           password: hashedPassword,
+          dateJoined: new Date(),
+          isActive: true,
+          isStaff: false,
+          isSuperuser: false,
+          firstName: result.data.fullName.split(' ')[0] || '',
+          lastName: result.data.fullName.split(' ').slice(1).join(' ') || ''
         })
         .returning();
 

@@ -10,7 +10,14 @@ export const users = pgTable("api_user", {
   fullName: varchar("full_name", { length: 255 }),
   avatar: varchar("avatar", { length: 255 }),
   phoneNumber: varchar("phone_number", { length: 20 }),
-  createdAt: timestamp("created_at").defaultNow()
+  lastLogin: timestamp("last_login"),
+  email: varchar("email", { length: 254 }),
+  dateJoined: timestamp("date_joined").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  isSuperuser: boolean("is_superuser").default(false),
+  isStaff: boolean("is_staff").default(false),
+  firstName: varchar("first_name", { length: 150 }).default(""),
+  lastName: varchar("last_name", { length: 150 }).default("")
 });
 
 export const teacherStudents = pgTable("api_teacherstudent", {
@@ -63,6 +70,12 @@ export const insertUserSchema = createInsertSchema(users, {
   fullName: z.string().min(1).max(255),
   avatar: z.string().url().optional(),
   phoneNumber: z.string().optional(),
+  email: z.string().email().optional(),
+  isActive: z.boolean().default(true),
+  isStaff: z.boolean().default(false),
+  isSuperuser: z.boolean().default(false),
+  firstName: z.string().default(""),
+  lastName: z.string().default("")
 });
 
 export const selectUserSchema = createSelectSchema(users);
