@@ -1,39 +1,40 @@
-import { mysqlTable, int, timestamp, boolean, text, varchar } from "drizzle-orm/mysql-core";
+import { pgTable, serial, timestamp, boolean, text, varchar, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = mysqlTable("users", {
-  id: int("id").primaryKey().autoincrement(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull().default("student"),
   fullName: varchar("full_name", { length: 255 }).notNull(),
-  avatar: varchar("avatar", { length: 255 }).notNull(),
+  avatar: varchar("avatar", { length: 255 }),
   phoneNumber: varchar("phone_number", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow()
 });
 
-export const teacherStudents = mysqlTable("teacher_students", {
-  id: int("id").primaryKey().autoincrement(),
-  teacherId: int("teacher_id").notNull().references(() => users.id),
-  studentId: int("student_id").notNull().references(() => users.id)
-});
-
-export const assignments = mysqlTable("assignments", {
-  id: int("id").primaryKey().autoincrement(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  dueDate: timestamp("due_date").notNull(),
-  teacherId: int("teacher_id").notNull().references(() => users.id),
-  studentId: int("student_id").references(() => users.id),
-  status: text("status").notNull().default("pending"),
+export const teacherStudents = pgTable("teacher_students", {
+  id: serial("id").primaryKey(),
+  teacherId: integer("teacher_id").notNull().references(() => users.id),
+  studentId: integer("student_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow()
 });
 
-export const submissions = mysqlTable("submissions", {
-  id: int("id").primaryKey().autoincrement(),
-  assignmentId: int("assignment_id").notNull().references(() => assignments.id),
-  studentId: int("student_id").notNull().references(() => users.id),
+export const assignments = pgTable("assignments", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  teacherId: integer("teacher_id").notNull().references(() => users.id),
+  studentId: integer("student_id").references(() => users.id),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const submissions = pgTable("submissions", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").notNull().references(() => assignments.id),
+  studentId: integer("student_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   submittedAt: timestamp("submitted_at").defaultNow(),
   isReviewed: boolean("is_reviewed").default(false),
@@ -41,43 +42,58 @@ export const submissions = mysqlTable("submissions", {
   reviewedAt: timestamp("reviewed_at")
 });
 
-export const teacherSchedule = mysqlTable("teacher_schedule", {
-  id: int("id").primaryKey().autoincrement(),
-  teacherId: int("teacher_id").references(() => users.id).notNull(),
-  dayOfWeek: int("day_of_week").notNull(), // 0-6 for Sunday-Saturday
-  startTime: text("start_time").notNull(), // Format: "HH:MM"
-  endTime: text("end_time").notNull(), // Format: "HH:MM"
+export const teacherSchedule = pgTable("teacher_schedule", {
+  id: serial("id").primaryKey(),
+  teacherId: integer("teacher_id").references(() => users.id).notNull(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6 for Sunday-Saturday
+  startTime: varchar("start_time", { length: 5 }).notNull(), // Format: "HH:MM"
+  endTime: varchar("end_time", { length: 5 }).notNull(), // Format: "HH:MM"
   isAvailable: boolean("is_available").notNull().default(true),
-  title: text("title"),
+  title: varchar("title", { length: 255 }),
   description: text("description"),
   cancellationReason: text("cancellation_reason"),
-  studentId: int("student_id").references(() => users.id),
+  studentId: integer("student_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow()
 });
 
-export const insertUserSchema = createInsertSchema(users);
+// User schemas
+export const insertUserSchema = createInsertSchema(users, {
+  role: z.enum(["student", "teacher"]),
+  username: z.string().min(3).max(255),
+  password: z.string().min(6).max(255),
+  fullName: z.string().min(1).max(255),
+  avatar: z.string().url().optional(),
+  phoneNumber: z.string().optional(),
+});
+
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = z.infer<typeof selectUserSchema>;
 
-export const insertTeacherScheduleSchema = createInsertSchema(teacherSchedule);
-export const selectTeacherScheduleSchema = createSelectSchema(teacherSchedule);
-export type InsertTeacherSchedule = z.infer<typeof insertTeacherScheduleSchema>;
-export type TeacherSchedule = z.infer<typeof selectTeacherScheduleSchema>;
+// Assignment schemas
+export const insertAssignmentSchema = createInsertSchema(assignments);
+export const selectAssignmentSchema = createSelectSchema(assignments);
+export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
+export type Assignment = z.infer<typeof selectAssignmentSchema>;
 
-export interface User extends z.infer<typeof selectUserSchema> {
-  id: number;
-  role: string;
-  username: string;
-  fullName: string;
-  avatar: string;
-}
-
+// Submission schemas
 export const insertSubmissionSchema = createInsertSchema(submissions);
 export const selectSubmissionSchema = createSelectSchema(submissions);
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
 export type Submission = z.infer<typeof selectSubmissionSchema>;
 
+// TeacherStudent schemas
 export const insertTeacherStudentSchema = createInsertSchema(teacherStudents);
 export const selectTeacherStudentSchema = createSelectSchema(teacherStudents);
 export type InsertTeacherStudent = z.infer<typeof insertTeacherStudentSchema>;
 export type TeacherStudent = z.infer<typeof selectTeacherStudentSchema>;
+
+// TeacherSchedule schemas
+export const insertTeacherScheduleSchema = createInsertSchema(teacherSchedule, {
+  dayOfWeek: z.number().min(0).max(6),
+  startTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  endTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+});
+export const selectTeacherScheduleSchema = createSelectSchema(teacherSchedule);
+export type InsertTeacherSchedule = z.infer<typeof insertTeacherScheduleSchema>;
+export type TeacherSchedule = z.infer<typeof selectTeacherScheduleSchema>;

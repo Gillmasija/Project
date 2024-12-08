@@ -5,9 +5,9 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
+import { users, teacherStudents, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "../db";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql, count } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -162,16 +162,13 @@ export function setupAuth(app: Express) {
         const teacherStudentCounts = await db
           .select({
             teacherId: users.id,
-            studentCount: sql<number>`count(${teacherStudents.studentId})`,
+            studentCount: count(teacherStudents.id),
           })
           .from(users)
-          .leftJoin(
-            teacherStudents,
-            eq(users.id, teacherStudents.teacherId)
-          )
+          .leftJoin(teacherStudents, eq(users.id, teacherStudents.teacherId))
           .where(eq(users.role, "teacher"))
           .groupBy(users.id)
-          .having(sql`count(${teacherStudents.studentId}) < 2`);
+          .having(sql`count(${teacherStudents.id}) < 2`);
 
         // Find the first available teacher
         if (teacherStudentCounts.length > 0) {

@@ -1,16 +1,18 @@
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from "@db/schema";
 
-const poolConnection = mysql.createPool({
-  host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
-  port: parseInt(process.env.MYSQL_PORT || '3306'),
-  ssl: {
-    rejectUnauthorized: true
-  }
-});
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL environment variable is required");
+}
 
-export const db = drizzle(poolConnection, { schema, mode: 'default' });
+const connectionString = process.env.DATABASE_URL;
+
+// Connection function for migrations
+const migrationClient = postgres(connectionString, { max: 1 });
+
+// Connection for query builder
+const queryClient = postgres(connectionString);
+
+export const db = drizzle(queryClient, { schema });
+export const migrationDb = drizzle(migrationClient, { schema });
