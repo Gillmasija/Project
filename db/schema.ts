@@ -35,7 +35,10 @@ export const submissions = pgTable("submissions", {
   assignmentId: integer("assignment_id").references(() => assignments.id).notNull(),
   studentId: integer("student_id").references(() => users.id).notNull(),
   content: text("content").notNull(),
-  submittedAt: timestamp("submitted_at").defaultNow()
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  isReviewed: boolean("is_reviewed").default(false),
+  reviewContent: text("review_content"),
+  reviewedAt: timestamp("reviewed_at")
 });
 
 export const teacherSchedule = pgTable("teacher_schedule", {
@@ -68,3 +71,13 @@ export interface User extends z.infer<typeof selectUserSchema> {
   fullName: string;
   avatar: string;
 }
+
+export const insertSubmissionSchema = createInsertSchema(submissions);
+export const selectSubmissionSchema = createSelectSchema(submissions);
+export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
+export type Submission = z.infer<typeof selectSubmissionSchema>;
+
+export const insertTeacherStudentSchema = createInsertSchema(teacherStudents);
+export const selectTeacherStudentSchema = createSelectSchema(teacherStudents);
+export type InsertTeacherStudent = z.infer<typeof insertTeacherStudentSchema>;
+export type TeacherStudent = z.infer<typeof selectTeacherStudentSchema>;

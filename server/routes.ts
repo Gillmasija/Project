@@ -185,10 +185,18 @@ export function registerRoutes(app: Express) {
               id: users.id,
               fullName: users.fullName,
               avatar: users.avatar
+            },
+            submission: {
+              content: submissions.content,
+              submittedAt: submissions.submittedAt,
+              isReviewed: submissions.isReviewed,
+              reviewContent: submissions.reviewContent,
+              reviewedAt: submissions.reviewedAt
             }
           })
           .from(assignments)
           .leftJoin(users, eq(assignments.studentId, users.id))
+          .leftJoin(submissions, eq(submissions.assignmentId, assignments.id))
           .where(eq(assignments.teacherId, req.user!.id))
           .orderBy(desc(assignments.createdAt))
       : await db
@@ -198,10 +206,14 @@ export function registerRoutes(app: Express) {
             description: assignments.description,
             dueDate: assignments.dueDate,
             teacherId: assignments.teacherId,
+            status: assignments.status,
             createdAt: assignments.createdAt,
             submission: {
               content: submissions.content,
-              submittedAt: submissions.submittedAt
+              submittedAt: submissions.submittedAt,
+              isReviewed: submissions.isReviewed,
+              reviewContent: submissions.reviewContent,
+              reviewedAt: submissions.reviewedAt
             }
           })
           .from(assignments)
@@ -329,6 +341,7 @@ export function registerRoutes(app: Express) {
     res.json(newAssignment);
   });
 
+  // Submit assignment
   app.post("/api/assignments/:id/submit", isAuthenticated, isStudent, async (req, res) => {
     const { content } = req.body;
     const assignmentId = parseInt(req.params.id);
@@ -338,11 +351,58 @@ export function registerRoutes(app: Express) {
       .values({
         content,
         assignmentId,
-        studentId: req.user!.id
+        studentId: req.user!.id,
+        isReviewed: false,
+        submittedAt: new Date()
       })
       .returning();
 
+    // Update assignment status
+    await db
+      .update(assignments)
+      .set({ status: "submitted" })
+      .where(eq(assignments.id, assignmentId));
+
     res.json(submission);
+  });
+
+  // Review submission
+  app.post("/api/assignments/:id/review", isAuthenticated, isTeacher, async (req, res) => {
+    const assignmentId = parseInt(req.params.id);
+    const { reviewContent } = req.body;
+
+    // Verify teacher owns this assignment
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(and(
+        eq(assignments.id, assignmentId),
+        eq(assignments.teacherId, req.user!.id)
+      ))
+      .limit(1);
+
+    if (!assignment) {
+      return res.status(403).send("Not authorized to review this assignment");
+    }
+
+    // Update the submission with review
+    const [updatedSubmission] = await db
+      .update(submissions)
+      .set({
+        isReviewed: true,
+        reviewContent,
+        reviewedAt: new Date()
+      })
+      .where(eq(submissions.assignmentId, assignmentId))
+      .returning();
+
+    // Update assignment status
+    await db
+      .update(assignments)
+      .set({ status: "reviewed" })
+      .where(eq(assignments.id, assignmentId));
+
+    res.json(updatedSubmission);
   });
 
   // Teacher Schedule Routes

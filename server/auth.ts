@@ -7,7 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -155,6 +155,33 @@ export function setupAuth(app: Express) {
           password: hashedPassword,
         })
         .returning();
+
+      // If the new user is a student, assign them to a teacher
+      if (result.data.role === "student") {
+        // Find teachers and count their students
+        const teacherStudentCounts = await db
+          .select({
+            teacherId: users.id,
+            studentCount: sql<number>`count(${teacherStudents.studentId})`,
+          })
+          .from(users)
+          .leftJoin(
+            teacherStudents,
+            eq(users.id, teacherStudents.teacherId)
+          )
+          .where(eq(users.role, "teacher"))
+          .groupBy(users.id)
+          .having(sql`count(${teacherStudents.studentId}) < 2`);
+
+        // Find the first available teacher
+        if (teacherStudentCounts.length > 0) {
+          const assignedTeacher = teacherStudentCounts[0];
+          await db.insert(teacherStudents).values({
+            teacherId: assignedTeacher.teacherId,
+            studentId: newUser.id,
+          });
+        }
+      }
 
       // Log the user in after registration
       req.login(newUser, (err) => {
