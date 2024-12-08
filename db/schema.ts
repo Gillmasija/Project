@@ -2,7 +2,7 @@ import { pgTable, serial, timestamp, boolean, text, varchar, integer } from "dri
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("drizzle_users", {
+export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
