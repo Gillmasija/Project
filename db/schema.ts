@@ -2,38 +2,36 @@ import { pgTable, serial, timestamp, boolean, text, varchar, integer } from "dri
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const users = pgTable("api_user", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
-  role: varchar("role", { length: 50 }).notNull().default("student"),
-  fullName: varchar("full_name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 10 }).notNull().default("student"),
+  fullName: varchar("full_name", { length: 255 }),
   avatar: varchar("avatar", { length: 255 }),
-  phoneNumber: varchar("phone_number", { length: 50 }),
-  createdAt: timestamp("created_at").defaultNow(),
-  isActive: boolean("is_active").notNull().default(true),
-  lastLogin: timestamp("last_login")
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow()
 });
 
-export const teacherStudents = pgTable("teacher_students", {
+export const teacherStudents = pgTable("api_teacherstudent", {
   id: serial("id").primaryKey(),
   teacherId: integer("teacher_id").notNull().references(() => users.id),
   studentId: integer("student_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow()
 });
 
-export const assignments = pgTable("assignments", {
+export const assignments = pgTable("api_assignment", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
   dueDate: timestamp("due_date").notNull(),
   teacherId: integer("teacher_id").notNull().references(() => users.id),
   studentId: integer("student_id").references(() => users.id),
-  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow()
 });
 
-export const submissions = pgTable("submissions", {
+export const submissions = pgTable("api_submission", {
   id: serial("id").primaryKey(),
   assignmentId: integer("assignment_id").notNull().references(() => assignments.id),
   studentId: integer("student_id").notNull().references(() => users.id),
@@ -44,16 +42,15 @@ export const submissions = pgTable("submissions", {
   reviewedAt: timestamp("reviewed_at")
 });
 
-export const teacherSchedule = pgTable("teacher_schedule", {
+export const teacherSchedule = pgTable("api_teacherschedule", {
   id: serial("id").primaryKey(),
   teacherId: integer("teacher_id").references(() => users.id).notNull(),
-  dayOfWeek: integer("day_of_week").notNull(), // 0-6 for Sunday-Saturday
-  startTime: varchar("start_time", { length: 5 }).notNull(), // Format: "HH:MM"
-  endTime: varchar("end_time", { length: 5 }).notNull(), // Format: "HH:MM"
+  dayOfWeek: integer("day_of_week").notNull(),
+  startTime: varchar("start_time", { length: 5 }).notNull(),
+  endTime: varchar("end_time", { length: 5 }).notNull(),
   isAvailable: boolean("is_available").notNull().default(true),
   title: varchar("title", { length: 255 }),
   description: text("description"),
-  cancellationReason: text("cancellation_reason"),
   studentId: integer("student_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow()
 });
@@ -91,11 +88,7 @@ export type InsertTeacherStudent = z.infer<typeof insertTeacherStudentSchema>;
 export type TeacherStudent = z.infer<typeof selectTeacherStudentSchema>;
 
 // TeacherSchedule schemas
-export const insertTeacherScheduleSchema = createInsertSchema(teacherSchedule, {
-  dayOfWeek: z.number().min(0).max(6),
-  startTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-  endTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-});
+export const insertTeacherScheduleSchema = createInsertSchema(teacherSchedule);
 export const selectTeacherScheduleSchema = createSelectSchema(teacherSchedule);
 export type InsertTeacherSchedule = z.infer<typeof insertTeacherScheduleSchema>;
 export type TeacherSchedule = z.infer<typeof selectTeacherScheduleSchema>;
