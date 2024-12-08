@@ -45,12 +45,52 @@ interface AvailabilityForm {
   scheduleId?: number;
 }
 
+interface NewScheduleForm {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  title?: string;
+  description?: string;
+}
+
 export default function TeacherDashboard() {
   const [isNewAssignmentOpen, setIsNewAssignmentOpen] = useState(false);
   const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
+  const [isNewScheduleOpen, setIsNewScheduleOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const newScheduleForm = useForm<NewScheduleForm>({
+    defaultValues: {
+      dayOfWeek: 1,
+      startTime: "09:00",
+      endTime: "10:00",
+      title: "",
+      description: ""
+    }
+  });
+
+  const createSchedule = useMutation({
+    mutationFn: async (data: NewScheduleForm) => {
+      const res = await fetch("/api/teacher/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to create schedule");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherSchedule"] });
+      setIsNewScheduleOpen(false);
+      newScheduleForm.reset();
+      toast({
+        title: "Success",
+        description: "Schedule created successfully"
+      });
+    }
+  });
 
   // Assignment form
   const assignmentForm = useForm<NewAssignment>({
@@ -263,7 +303,102 @@ export default function TeacherDashboard() {
               <StudentList />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-4">Schedule Management</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-2xl font-bold">Schedule Management</h3>
+                <Dialog open={isNewScheduleOpen} onOpenChange={setIsNewScheduleOpen}>
+                  <DialogTrigger asChild>
+                    <Button>Add Schedule</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Schedule</DialogTitle>
+                    </DialogHeader>
+                    <Form {...newScheduleForm}>
+                      <form onSubmit={newScheduleForm.handleSubmit(data => createSchedule.mutate(data))} className="space-y-4">
+                        <FormField
+                          control={newScheduleForm.control}
+                          name="dayOfWeek"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Day of Week</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a day" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="1">Monday</SelectItem>
+                                  <SelectItem value="2">Tuesday</SelectItem>
+                                  <SelectItem value="3">Wednesday</SelectItem>
+                                  <SelectItem value="4">Thursday</SelectItem>
+                                  <SelectItem value="5">Friday</SelectItem>
+                                  <SelectItem value="6">Saturday</SelectItem>
+                                  <SelectItem value="0">Sunday</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={newScheduleForm.control}
+                          name="startTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Start Time</FormLabel>
+                              <FormControl>
+                                <Input type="time" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={newScheduleForm.control}
+                          name="endTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Time</FormLabel>
+                              <FormControl>
+                                <Input type="time" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={newScheduleForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Title (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={newScheduleForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full">Create Schedule</Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <div className="space-y-4">
                 <Dialog open={isAvailabilityOpen} onOpenChange={setIsAvailabilityOpen}>
                   <DialogTrigger asChild>
