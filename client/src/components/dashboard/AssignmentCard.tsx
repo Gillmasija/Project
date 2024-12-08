@@ -16,6 +16,9 @@ interface Assignment {
   submission?: {
     content: string;
     submittedAt: string;
+    isReviewed?: boolean;
+    reviewContent?: string;
+    reviewedAt?: string;
   };
 }
 
@@ -26,6 +29,7 @@ interface AssignmentCardProps {
 
 export default function AssignmentCard({ assignment, isTeacher }: AssignmentCardProps) {
   const [submission, setSubmission] = useState("");
+  const [review, setReview] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -45,6 +49,26 @@ export default function AssignmentCard({ assignment, isTeacher }: AssignmentCard
       toast({
         title: "Success",
         description: "Assignment submitted successfully"
+      });
+    }
+  });
+
+  const submitReview = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/assignments/${assignment.id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewContent: review })
+      });
+      if (!res.ok) throw new Error("Failed to submit review");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      setReview("");
+      toast({
+        title: "Success",
+        description: "Review submitted successfully"
       });
     }
   });
@@ -74,6 +98,34 @@ export default function AssignmentCard({ assignment, isTeacher }: AssignmentCard
             <p className="text-xs text-muted-foreground mt-2">
               Submitted: {format(new Date(assignment.submission.submittedAt), "PPp")}
             </p>
+            
+            {assignment.submission.isReviewed && (
+              <div className="mt-4 border-t pt-4">
+                <p className="text-sm font-medium">Teacher's Review</p>
+                <p className="text-sm mt-2">{assignment.submission.reviewContent}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Reviewed: {format(new Date(assignment.submission.reviewedAt!), "PPp")}
+                </p>
+              </div>
+            )}
+            
+            {isTeacher && !assignment.submission.isReviewed && (
+              <div className="mt-4 border-t pt-4">
+                <Textarea
+                  placeholder="Add your review here..."
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  className="mt-2"
+                />
+                <Button
+                  onClick={() => submitReview.mutate()}
+                  disabled={!review.trim()}
+                  className="w-full mt-4"
+                >
+                  Submit Review
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
