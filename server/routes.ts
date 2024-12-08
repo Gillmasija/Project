@@ -130,6 +130,107 @@ export function registerRoutes(app: Express) {
     res.json(students);
   });
 
+  // Assign student to teacher
+  app.post("/api/teacher/assign-student/:studentId", isAuthenticated, isTeacher, async (req, res) => {
+    const studentId = parseInt(req.params.studentId);
+
+    // Check if student exists
+    const [student] = await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.id, studentId),
+        eq(users.role, "student")
+      ))
+      .limit(1);
+
+    if (!student) {
+      return res.status(404).send("Student not found");
+    }
+
+    // Check if student is already assigned to a teacher
+    const [existingAssignment] = await db
+      .select()
+      .from(teacherStudents)
+      .where(eq(teacherStudents.studentId, studentId))
+      .limit(1);
+
+    if (existingAssignment) {
+      return res.status(400).send("Student is already assigned to a teacher");
+    }
+
+    // Check if teacher has less than 2 students
+    const [teacherStudentCount] = await db
+      .select({ count: count() })
+      .from(teacherStudents)
+      .where(eq(teacherStudents.teacherId, req.user!.id));
+
+    if ((teacherStudentCount?.count || 0) >= 2) {
+      return res.status(400).send("Teacher already has maximum number of students");
+    }
+
+    // Assign student to teacher
+    await db.insert(teacherStudents)
+      .values({
+        teacherId: req.user!.id,
+        studentId: studentId
+      });
+
+    res.json({ message: "Student assigned successfully" });
+  });
+
+  // Get available teachers (those with less than 2 students)
+  app.get("/api/available-teachers", isAuthenticated, async (req, res) => {
+    const availableTeachers = await db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        avatar: users.avatar,
+        studentCount: sql<number>`count(${teacherStudents.studentId})`
+      })
+      .from(users)
+      .leftJoin(teacherStudents, eq(users.id, teacherStudents.teacherId))
+      .where(eq(users.role, "teacher"))
+      .groupBy(users.id, users.fullName, users.avatar)
+      .having(sql`count(${teacherStudents.studentId}) < 2`);
+
+    res.json(availableTeachers);
+  });
+
+  // Assign student to available teacher
+  app.post("/api/assign-student-to-teacher", isAuthenticated, async (req, res) => {
+    const { studentId, teacherId } = req.body;
+
+    // Check if student exists and is not already assigned
+    const [existingAssignment] = await db
+      .select()
+      .from(teacherStudents)
+      .where(eq(teacherStudents.studentId, studentId))
+      .limit(1);
+
+    if (existingAssignment) {
+      return res.status(400).send("Student is already assigned to a teacher");
+    }
+
+    // Verify teacher exists and has space
+    const [teacherStudentCount] = await db
+      .select({ count: count() })
+      .from(teacherStudents)
+      .where(eq(teacherStudents.teacherId, teacherId));
+
+    if ((teacherStudentCount?.count || 0) >= 2) {
+      return res.status(400).send("Selected teacher already has maximum number of students");
+    }
+
+    // Assign student to teacher
+    await db.insert(teacherStudents)
+      .values({
+        teacherId,
+        studentId
+      });
+
+    res.json({ message: "Student assigned to teacher successfully" });
+  });
   // Delete student from teacher's roster
   app.delete("/api/teacher/students/:studentId", isAuthenticated, isTeacher, async (req, res) => {
     const studentId = parseInt(req.params.studentId);
