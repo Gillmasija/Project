@@ -130,6 +130,35 @@ export function registerRoutes(app: Express) {
     res.json(students);
   });
 
+  // Delete student from teacher's roster
+  app.delete("/api/teacher/students/:studentId", isAuthenticated, isTeacher, async (req, res) => {
+    const studentId = parseInt(req.params.studentId);
+
+    // Verify that this student is assigned to the teacher
+    const [relationship] = await db
+      .select()
+      .from(teacherStudents)
+      .where(and(
+        eq(teacherStudents.teacherId, req.user!.id),
+        eq(teacherStudents.studentId, studentId)
+      ))
+      .limit(1);
+
+    if (!relationship) {
+      return res.status(404).send("Student not found in your roster");
+    }
+
+    // Delete the teacher-student relationship
+    await db
+      .delete(teacherStudents)
+      .where(and(
+        eq(teacherStudents.teacherId, req.user!.id),
+        eq(teacherStudents.studentId, studentId)
+      ));
+
+    res.json({ message: "Student removed from roster successfully" });
+  });
+
   // Student routes
   app.get("/api/student/stats", isAuthenticated, isStudent, async (req, res) => {
     const [assignmentCount] = await db
