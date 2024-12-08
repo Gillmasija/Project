@@ -476,16 +476,46 @@ export function registerRoutes(app: Express) {
     const { content } = req.body;
     const assignmentId = parseInt(req.params.id);
 
-    const [submission] = await db
-      .insert(submissions)
-      .values({
-        content,
-        assignmentId,
-        studentId: req.user!.id,
-        isReviewed: false,
-        submittedAt: new Date()
-      })
-      .returning();
+    // Check if submission already exists
+    const [existingSubmission] = await db
+      .select()
+      .from(submissions)
+      .where(and(
+        eq(submissions.assignmentId, assignmentId),
+        eq(submissions.studentId, req.user!.id)
+      ))
+      .limit(1);
+
+    let submission;
+    if (existingSubmission) {
+      // Update existing submission
+      [submission] = await db
+        .update(submissions)
+        .set({
+          content,
+          submittedAt: new Date(),
+          isReviewed: false, // Reset review status on update
+          reviewContent: null,
+          reviewedAt: null
+        })
+        .where(and(
+          eq(submissions.assignmentId, assignmentId),
+          eq(submissions.studentId, req.user!.id)
+        ))
+        .returning();
+    } else {
+      // Create new submission
+      [submission] = await db
+        .insert(submissions)
+        .values({
+          content,
+          assignmentId,
+          studentId: req.user!.id,
+          isReviewed: false,
+          submittedAt: new Date()
+        })
+        .returning();
+    }
 
     // Update assignment status
     await db

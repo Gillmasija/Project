@@ -106,6 +106,23 @@ export default function AssignmentCard({ assignment, isTeacher }: AssignmentCard
                 <p className="text-xs text-muted-foreground mt-2">
                   Reviewed: {format(new Date(assignment.submission.reviewedAt!), "PPp")}
                 </p>
+                {!isTeacher && (
+                  <div className="mt-4">
+                    <Textarea
+                      placeholder="Update your submission here..."
+                      value={submission}
+                      onChange={(e) => setSubmission(e.target.value)}
+                      className="mt-2"
+                    />
+                    <Button
+                      onClick={() => submitAssignment.mutate()}
+                      disabled={!submission.trim()}
+                      className="w-full mt-4"
+                    >
+                      Update Submission
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
             
