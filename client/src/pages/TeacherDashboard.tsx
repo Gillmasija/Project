@@ -35,14 +35,6 @@ interface Schedule {
   dayOfWeek: string;
   startTime: string;
   endTime: string;
-  isAvailable: boolean;
-  cancellationReason?: string;
-}
-
-interface AvailabilityForm {
-  isAvailable: boolean;
-  cancellationReason?: string;
-  scheduleId?: number;
 }
 
 interface NewScheduleForm {
@@ -55,9 +47,7 @@ interface NewScheduleForm {
 
 export default function TeacherDashboard() {
   const [isNewAssignmentOpen, setIsNewAssignmentOpen] = useState(false);
-  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
   const [isNewScheduleOpen, setIsNewScheduleOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -92,7 +82,6 @@ export default function TeacherDashboard() {
     }
   });
 
-  // Assignment form
   const assignmentForm = useForm<NewAssignment>({
     defaultValues: {
       title: "",
@@ -102,53 +91,12 @@ export default function TeacherDashboard() {
     }
   });
 
-  // Availability form
-  const availabilityForm = useForm<AvailabilityForm>({
-    defaultValues: {
-      isAvailable: true,
-      cancellationReason: ""
-    }
-  });
-
-  const updateAvailability = useMutation({
-    mutationFn: async (data: AvailabilityForm) => {
-      const res = await fetch(`/api/teacher/schedule/${data.scheduleId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          isAvailable: data.isAvailable,
-          cancellationReason: data.cancellationReason
-        })
-      });
-      if (!res.ok) throw new Error("Failed to update availability");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teacherSchedule"] });
-      setIsAvailabilityOpen(false);
-      availabilityForm.reset();
-      toast({
-        title: "Success",
-        description: "Schedule updated successfully"
-      });
-    }
-  });
-
   const { data: students } = useQuery<Student[]>({
     queryKey: ["students"],
     queryFn: async () => {
       const res = await fetch("/api/teacher/students");
       if (!res.ok) throw new Error("Failed to fetch students");
       return res.json();
-    }
-  });
-
-  const form = useForm<NewAssignment>({
-    defaultValues: {
-      title: "",
-      description: "",
-      dueDate: "",
-      studentId: undefined
     }
   });
 
@@ -192,7 +140,7 @@ export default function TeacherDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       setIsNewAssignmentOpen(false);
-      form.reset();
+      assignmentForm.reset();
       toast({
         title: "Success",
         description: "Assignment created successfully"
@@ -216,7 +164,7 @@ export default function TeacherDashboard() {
               <Form {...assignmentForm}>
                 <form onSubmit={assignmentForm.handleSubmit(data => createAssignment.mutate(data))} className="space-y-4">
                   <FormField
-                    control={form.control}
+                    control={assignmentForm.control}
                     name="title"
                     render={({ field }) => (
                       <FormItem>
@@ -228,7 +176,7 @@ export default function TeacherDashboard() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={assignmentForm.control}
                     name="description"
                     render={({ field }) => (
                       <FormItem>
@@ -240,7 +188,7 @@ export default function TeacherDashboard() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={assignmentForm.control}
                     name="dueDate"
                     render={({ field }) => (
                       <FormItem>
@@ -252,7 +200,7 @@ export default function TeacherDashboard() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={assignmentForm.control}
                     name="studentId"
                     render={({ field }) => (
                       <FormItem>
@@ -400,67 +348,16 @@ export default function TeacherDashboard() {
                 </Dialog>
               </div>
               <div className="space-y-4">
-                <Dialog open={isAvailabilityOpen} onOpenChange={setIsAvailabilityOpen}>
-                  <DialogTrigger asChild>
-                    <Button>Manage Availability</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Manage Availability</DialogTitle>
-                    </DialogHeader>
-                    <Form {...availabilityForm}>
-                      <form onSubmit={availabilityForm.handleSubmit((data) => updateAvailability.mutate(data))} className="space-y-4">
-                        <FormField
-                          control={availabilityForm.control}
-                          name="cancellationReason"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Reason for Cancellation</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} placeholder="Please provide a reason for cancelling this slot" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="submit" className="w-full">Cancel Slot</Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-                <div className="space-y-4">
-                  {schedule?.map((slot) => (
-                    <div key={slot.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow">
-                      <div>
-                        <p className="font-medium">{slot.title || "Class Session"}</p>
-                        <p className="text-sm text-gray-500">
-                          {slot.dayOfWeek}, {slot.startTime} - {slot.endTime}
-                        </p>
-                        {!slot.isAvailable && (
-                          <p className="text-sm text-red-500">
-                            Cancelled: {slot.cancellationReason}
-                          </p>
-                        )}
-                      </div>
-                      {slot.isAvailable && (
-                        <Button
-                          variant="destructive"
-                          onClick={() => {
-                            setSelectedSlot(slot.id);
-                            setIsAvailabilityOpen(true);
-                            availabilityForm.reset({
-                              isAvailable: false,
-                              scheduleId: slot.id,
-                              cancellationReason: ""
-                            });
-                          }}
-                        >
-                          Cancel Slot
-                        </Button>
-                      )}
+                {schedule?.map((slot) => (
+                  <div key={slot.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                    <div>
+                      <p className="font-medium">{slot.title || "Class Session"}</p>
+                      <p className="text-sm text-gray-500">
+                        {slot.dayOfWeek}, {slot.startTime} - {slot.endTime}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
