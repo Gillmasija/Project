@@ -50,10 +50,19 @@ export default function AuthPage() {
     }
   });
 
-  async function onSubmit(data: InsertUser) {
+  async function onSubmit(values: RegisterFormData) {
     try {
+      const data = {
+        username: values.username,
+        password: values.password,
+        role: values.role,
+        fullName: values.fullName || "",
+        phoneNumber: values.phoneNumber,
+      };
+      
       console.log('Attempting to', isLogin ? 'login' : 'register', 'with:', { ...data, password: '***' });
       const result = await (isLogin ? login(data) : register(data));
+      
       if (!result.ok) {
         console.error('Auth error:', result.message);
         toast({
@@ -66,7 +75,6 @@ export default function AuthPage() {
           title: "Success",
           description: `Successfully ${isLogin ? 'logged in' : 'registered'}!`
         });
-        // Redirect will happen automatically through the useUser hook
       }
     } catch (error: any) {
       console.error('Auth error:', error);
