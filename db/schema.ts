@@ -29,12 +29,12 @@ export const teacherStudents = pgTable("api_teacherstudent", {
 
 export const assignments = pgTable("api_assignment", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
   dueDate: timestamp("due_date").notNull(),
   teacherId: integer("teacher_id").notNull().references(() => users.id),
   studentId: integer("student_id").references(() => users.id),
-  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  status: varchar("status", { length: 20 }).default("pending"),
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -51,11 +51,11 @@ export const submissions = pgTable("api_submission", {
 
 export const teacherSchedule = pgTable("api_teacherschedule", {
   id: serial("id").primaryKey(),
-  teacherId: integer("teacher_id").references(() => users.id).notNull(),
+  teacherId: integer("teacher_id").notNull().references(() => users.id),
   dayOfWeek: integer("day_of_week").notNull(),
   startTime: varchar("start_time", { length: 5 }).notNull(),
   endTime: varchar("end_time", { length: 5 }).notNull(),
-  isAvailable: boolean("is_available").notNull().default(true),
+  isAvailable: boolean("is_available").default(true),
   title: varchar("title", { length: 255 }),
   description: text("description"),
   studentId: integer("student_id").references(() => users.id),
@@ -82,26 +82,8 @@ export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = z.infer<typeof selectUserSchema>;
 
-// Assignment schemas
-export const insertAssignmentSchema = createInsertSchema(assignments);
-export const selectAssignmentSchema = createSelectSchema(assignments);
-export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
-export type Assignment = z.infer<typeof selectAssignmentSchema>;
-
-// Submission schemas
-export const insertSubmissionSchema = createInsertSchema(submissions);
-export const selectSubmissionSchema = createSelectSchema(submissions);
-export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
-export type Submission = z.infer<typeof selectSubmissionSchema>;
-
 // TeacherStudent schemas
 export const insertTeacherStudentSchema = createInsertSchema(teacherStudents);
 export const selectTeacherStudentSchema = createSelectSchema(teacherStudents);
 export type InsertTeacherStudent = z.infer<typeof insertTeacherStudentSchema>;
 export type TeacherStudent = z.infer<typeof selectTeacherStudentSchema>;
-
-// TeacherSchedule schemas
-export const insertTeacherScheduleSchema = createInsertSchema(teacherSchedule);
-export const selectTeacherScheduleSchema = createSelectSchema(teacherSchedule);
-export type InsertTeacherSchedule = z.infer<typeof insertTeacherScheduleSchema>;
-export type TeacherSchedule = z.infer<typeof selectTeacherScheduleSchema>;

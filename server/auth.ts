@@ -42,27 +42,26 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
   }
   res.status(401).send("Not authenticated");
 }
-
 // Middleware to check if user is a teacher
 export function isTeacher(req: Request, res: Response, next: NextFunction) {
-  if (req.user?.role === "teacher") {
-    return next();
+  if (req.user?.role !== "teacher") {
+    return res.status(403).send("Access denied. Teachers only.");
   }
-  res.status(403).send("Not authorized - Teacher access required");
+  next();
 }
 
 // Middleware to check if user is a student
 export function isStudent(req: Request, res: Response, next: NextFunction) {
-  if (req.user?.role === "student") {
-    return next();
+  if (req.user?.role !== "student") {
+    return res.status(403).send("Access denied. Students only.");
   }
-  res.status(403).send("Not authorized - Student access required");
+  next();
 }
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "porygon-supremacy",
+    secret: process.env.REPL_ID || "your-secret-key",
     resave: false,
     saveUninitialized: false,
     cookie: {},
@@ -98,6 +97,13 @@ export function setupAuth(app: Express) {
         if (!isMatch) {
           return done(null, false, { message: "Incorrect password." });
         }
+
+        // Update last login
+        await db
+          .update(users)
+          .set({ lastLogin: new Date() })
+          .where(eq(users.id, user.id));
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -131,7 +137,7 @@ export function setupAuth(app: Express) {
           .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
       }
 
-      const { username, password } = result.data;
+      const { username, password, role, fullName } = result.data;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -157,13 +163,13 @@ export function setupAuth(app: Express) {
           isActive: true,
           isStaff: false,
           isSuperuser: false,
-          firstName: result.data.fullName.split(' ')[0] || '',
-          lastName: result.data.fullName.split(' ').slice(1).join(' ') || ''
+          firstName: fullName.split(' ')[0] || '',
+          lastName: fullName.split(' ').slice(1).join(' ') || ''
         })
         .returning();
 
-      // If the new user is a student, assign them to a teacher
-      if (result.data.role === "student") {
+      // If the new user is a student, try to assign them to a teacher
+      if (role === "student") {
         // Find teachers and count their students
         const teacherStudentCounts = await db
           .select({
@@ -193,7 +199,7 @@ export function setupAuth(app: Express) {
         }
         return res.json({
           message: "Registration successful",
-          user: newUser,
+          user: newUser
         });
       });
     } catch (error) {
@@ -202,14 +208,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    const result = insertUserSchema.safeParse(req.body);
-    if (!result.success) {
-      return res
-        .status(400)
-        .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
-    }
-
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
+    passport.authenticate("local", (err: any, user: Express.User, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
@@ -225,11 +224,10 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "Login successful",
-          user,
+          user
         });
       });
-    };
-    passport.authenticate("local", cb)(req, res, next);
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
@@ -237,7 +235,6 @@ export function setupAuth(app: Express) {
       if (err) {
         return res.status(500).send("Logout failed");
       }
-
       res.json({ message: "Logout successful" });
     });
   });
